@@ -1,6 +1,6 @@
 # Our Days
 
-Our Days is a mobile-first, private-album prototype for two people. Phase 0 provides a complete, navigable local scaffold: polished base routes, deterministic demo memories, form validation, and future Supabase connection points without requiring credentials.
+Our Days is a mobile-first private album for two people. The app keeps a local fallback for previews, while a configured Supabase project enables real authentication, shared spaces, private memories, Storage photos, and invitation links.
 
 ## Requirements
 
@@ -24,16 +24,16 @@ Open `http://localhost:3000` after starting the development server.
 - `/` — featured and recent memories
 - `/memories` — chronological gallery with year filters
 - `/memories/[id]` — memory detail; unknown IDs use Next.js `notFound()`
-- `/memories/new` — demo create form
-- `/memories/[id]/edit` — demo edit form populated from local data
-- `/settings` — local space and connection status
-- `/login` and `/invite` — non-authenticated preview routes
+- `/memories/new` — create a persisted memory when authenticated
+- `/memories/[id]/edit` — edit a persisted memory and its ordered photos
+- `/settings` — space details, invitation link, and sign out
+- `/login` and `/invite` — authentication and private invitation flow
 
-All pages use local deterministic data. Create and edit submissions validate in the browser, display a demo confirmation, and do not persist or transmit data.
+Without Supabase variables, app routes use deterministic local data. With Supabase configured, protected app routes require a session and all memory reads/writes are scoped through `space_members` and RLS.
 
 ## Architecture
 
-The app is a modular Next.js monolith. Server Components are the default. Client Components are limited to current-route navigation, the React Hook Form interaction, the demo submission hook, the error boundary, and the Motion reveal wrapper.
+The app is a modular Next.js monolith. Server Components are the default. Client Components are limited to interactive forms, current-route navigation, auth feedback, photo previews, the error boundary, and Motion wrappers.
 
 ### Memory data design
 
@@ -43,16 +43,17 @@ The app is a modular Next.js monolith. Server Components are the default. Client
 - `getById(id)` returns one memory or `null`.
 - `years()` returns available years in descending order.
 
-This interface is the memory-reading seam used by pages. `localMemoryCatalog` is the current adapter at that seam and owns all deterministic demo data. A future Supabase adapter can satisfy the same interface, keeping replacement local to the feature instead of spreading database details through page modules.
+This interface is the memory-reading seam used by pages. `localMemoryCatalog` provides the deterministic fallback and `supabase-memory-repository` provides the authenticated adapter, keeping database details inside the feature instead of spreading them through page modules.
 
 The module is intentionally deeper than a data export: ordering, lookup miss behavior, year extraction, and demo ownership remain behind its small interface. Pages handle only presentation-specific filtering.
 
 ### Other module decisions
 
 - `lib/validations` owns Zod schemas shared by form modules.
-- `components/forms/MemoryForm` uses React Hook Form with a Zod-backed resolver and clearly marks its non-persistent behavior.
-- `lib/supabase` is an environment-aware adapter seam. Browser and server helpers return `null` when optional public configuration is absent. Demo pages do not import either helper.
-- `features/photos` records the future image constraints without implementing upload or processing.
+- `components/forms/MemoryForm` uses React Hook Form with a Zod-backed resolver and sends validated mutations through the server action boundary.
+- `lib/supabase` owns browser, server, and request-session adapters.
+- `features/auth` owns session context, sign-in/sign-up, invite creation, and invite acceptance.
+- `features/photos` owns image constraints, WebP processing, private Storage paths, signed URLs, and lazy rendering.
 - `features/music` contains URL-domain knowledge, separate from visual song rendering.
 - `components/gallery/MemoryGallery` exposes loaded, loading, empty, and error treatments.
 - `components/motion/Reveal` uses Motion and disables entrance movement when the user prefers reduced motion. Global CSS also suppresses nonessential motion.
@@ -77,14 +78,15 @@ styles/
 
 ## Environment variables
 
-No environment variables are required for the Phase 0 demo. Copy `.env.example` to `.env.local` only when preparing a Supabase project.
+Copy `.env.example` to `.env.local` and fill in the public Supabase URL and key to enable the private flow. The local demo remains available when these values are absent.
 
-| Variable | Exposure | Phase 0 behavior |
+| Variable | Exposure | Purpose |
 | --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Browser-safe project URL | Optional; adapter returns `null` when absent |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser-safe legacy anon key | Optional fallback public key |
+| `NEXT_PUBLIC_SUPABASE_URL` | Browser-safe project URL | Supabase project endpoint |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser-safe legacy anon key | Public fallback key |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Browser-safe modern publishable key | Optional; preferred over anon key when set |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server only | Optional and currently unused; never expose to client code |
+| `NEXT_PUBLIC_SITE_URL` | Public origin | Fallback origin for generated invite links |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server only | Reserved for future administration; never expose to client code |
 
 The service-role key is deliberately absent from browser helpers and must never use a `NEXT_PUBLIC_` prefix.
 
@@ -98,23 +100,20 @@ The service-role key is deliberately absent from browser helpers and must never 
 - Responsive cards and editorial desktop layouts
 - Reduced-motion handling in CSS and Motion
 
-## Current demo limitations
+## Current boundaries
 
-- No real authentication, authorization, database, Row Level Security, storage, signed URLs, or credentials
-- No persistent create/edit/delete behavior
-- File selection is local; images are not read, compressed, reordered, or uploaded
-- Visuals are CSS gradients plus a repository-owned SVG; no remote or copyrighted photos are fetched
+- Email confirmation and provider settings remain controlled by Supabase Auth.
+- Invite links expire after seven days and can optionally be restricted to one email.
+- The current workspace model starts with one space per account; invited members join that space.
 - Song links open provider home pages and do not embed playback
-- Loading and error interfaces exist, but deterministic local reads normally resolve immediately
+- Without Supabase configuration, loading and error interfaces still resolve through deterministic local data
 
 ## Next steps
 
-1. Establish visual tokens and reusable interactive states with real-device review.
-2. Add a Supabase `MemoryCatalog` adapter while keeping the local adapter for previews.
-3. Introduce authentication, space membership, RLS policies, and private storage together so privacy is end-to-end.
-4. Add image validation, resizing, compression, ordering, upload progress, and recovery.
-5. Replace demo form submission with server-side mutation logic and revalidation.
+1. Verify the complete authenticated flow with two accounts.
+2. Add end-to-end runtime checks for invite acceptance and unauthorized access.
+3. Integrate the final upload, detail, edit, and timeline flow in Phase 11.
 
 ## Work-unit boundary
 
-The scaffold is one uncommitted work unit. Its rollback boundary is every new project file listed above, excluding the pre-existing `project-phases.md`. No Git operation is required to run or inspect it.
+Each phase is committed as a reviewable work unit. The local fallback remains the safe preview boundary when Supabase configuration is absent.
