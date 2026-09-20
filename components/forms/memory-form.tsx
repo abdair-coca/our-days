@@ -5,11 +5,15 @@ import { useEffect, useRef, useState } from "react";
 import type { FieldError, Resolver } from "react-hook-form";
 import { useForm, useWatch } from "react-hook-form";
 
+import {
+  createMemoryAction,
+  updateMemoryAction,
+} from "@/features/memories/mutations";
 import { useDemoSubmit } from "@/hooks/use-demo-submit";
 import { memoryFormSchema, type MemoryFormValues } from "@/lib/validations/memory";
 import type { MemoryPhoto } from "@/types/memory";
 import { Button } from "@/components/ui/button";
-import { SuccessState } from "@/components/ui/status-panel";
+import { ErrorState, SuccessState } from "@/components/ui/status-panel";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -23,6 +27,7 @@ import {
 type MemoryFormProps = {
   defaultValues?: MemoryFormValues;
   initialPhotos?: readonly MemoryPhoto[];
+  memoryId?: string;
   mode: "create" | "edit";
 };
 
@@ -84,6 +89,7 @@ function PhotoPreview({ photo }: { photo: PhotoDraft }) {
 export function MemoryForm({
   defaultValues,
   initialPhotos = [],
+  memoryId,
   mode,
 }: MemoryFormProps) {
   const demoSubmit = useDemoSubmit();
@@ -113,8 +119,30 @@ export function MemoryForm({
     };
   }, []);
 
-  const onSubmit = handleSubmit(async () => {
-    await demoSubmit.submit();
+  const onSubmit = handleSubmit(async (values) => {
+    const input = {
+      ...values,
+      photos: photos.map((photo) => ({
+        alt: photo.name,
+        id: photo.id,
+        visualValue: photo.gradient,
+      })),
+    };
+
+    await demoSubmit.submit(() => {
+      if (mode === "edit" && memoryId) {
+        return updateMemoryAction(memoryId, input);
+      }
+
+      if (mode === "edit") {
+        return Promise.resolve({
+          message: "No encontramos el recuerdo que quieres editar.",
+          ok: false,
+        });
+      }
+
+      return createMemoryAction(input);
+    });
   });
 
   function handlePhotosChange(event: ChangeEvent<HTMLInputElement>) {
@@ -321,7 +349,9 @@ export function MemoryForm({
           </Button>
           <p aria-live="polite" className="text-sm text-text-soft">
             {demoSubmit.state === "success"
-              ? "Validación completa. Nada fue guardado."
+              ? demoSubmit.message
+              : demoSubmit.state === "error"
+                ? demoSubmit.message
               : isDirty
                 ? "Cambios locales sin guardar."
                 : "Sin cambios."}
@@ -330,8 +360,13 @@ export function MemoryForm({
 
         {demoSubmit.state === "success" ? (
           <SuccessState title="Listo para conectar">
-            La validación pasó. En la siguiente integración, este contenido podrá guardarse en el espacio compartido.
+            {demoSubmit.message}
           </SuccessState>
+        ) : null}
+        {demoSubmit.state === "error" ? (
+          <ErrorState title="No pudimos guardar">
+            {demoSubmit.message}
+          </ErrorState>
         ) : null}
       </div>
 

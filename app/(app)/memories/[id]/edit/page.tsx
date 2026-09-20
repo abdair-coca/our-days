@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import { MemoryForm } from "@/components/forms/memory-form";
 import { PageShell } from "@/components/layout/page-shell";
-import { localMemoryCatalog } from "@/features/memories";
+import { getMemoryCatalog } from "@/features/memories";
 
 type EditMemoryPageProps = {
   params: Promise<{ id: string }>;
@@ -10,7 +10,8 @@ type EditMemoryPageProps = {
 
 export default async function EditMemoryPage({ params }: EditMemoryPageProps) {
   const { id } = await params;
-  const memory = await localMemoryCatalog.getById(id);
+  const catalog = await getMemoryCatalog();
+  const memory = await catalog.getById(id);
 
   if (!memory) {
     notFound();
@@ -33,6 +34,7 @@ export default async function EditMemoryPage({ params }: EditMemoryPageProps) {
             songUrl: memory.song?.url ?? "",
           }}
           initialPhotos={memory.photos}
+          memoryId={memory.id}
           mode="edit"
         />
       </div>

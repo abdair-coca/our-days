@@ -4,7 +4,7 @@ import { MemoryGrid } from "@/components/memory/memory-grid";
 import { PageShell } from "@/components/layout/page-shell";
 import { ButtonLink } from "@/components/ui/button-link";
 import { PlusIcon } from "@/components/ui/icons";
-import { localMemoryCatalog } from "@/features/memories";
+import { getMemoryCatalog } from "@/features/memories";
 import { classNames } from "@/lib/utils/class-names";
 
 type MemoriesPageProps = {
@@ -12,10 +12,11 @@ type MemoriesPageProps = {
 };
 
 export default async function MemoriesPage({ searchParams }: MemoriesPageProps) {
+  const catalog = await getMemoryCatalog();
   const [{ year }, memories, years] = await Promise.all([
     searchParams,
-    localMemoryCatalog.list(),
-    localMemoryCatalog.years(),
+    catalog.list(),
+    catalog.years(),
   ]);
   const selectedYear = year ? Number(year) : null;
   const visibleMemories = selectedYear

@@ -4,11 +4,12 @@ import { MemoryCard } from "@/components/memory/memory-card";
 import { Reveal } from "@/components/motion/reveal";
 import { ButtonLink } from "@/components/ui/button-link";
 import { EmptyState } from "@/components/ui/status-panel";
-import { localMemoryCatalog } from "@/features/memories";
+import { getMemoryCatalog } from "@/features/memories";
 import { formatMemoryDate } from "@/lib/utils/format-memory-date";
 
 export default async function HomePage() {
-  const memories = await localMemoryCatalog.list();
+  const catalog = await getMemoryCatalog();
+  const memories = await catalog.list();
   const [featured, ...recent] = memories;
   const todayMemory = recent[0] ?? featured;
 

@@ -2,12 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { MemoryGallery } from "@/components/gallery/memory-gallery";
+import { DeleteMemoryButton } from "@/components/memory/delete-memory-button";
 import { Reveal } from "@/components/motion/reveal";
 import { SongCard } from "@/components/music/song-card";
-import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button-link";
-import { ArrowLeftIcon, EditIcon, TrashIcon } from "@/components/ui/icons";
-import { localMemoryCatalog } from "@/features/memories";
+import { ArrowLeftIcon, EditIcon } from "@/components/ui/icons";
+import { getMemoryCatalog } from "@/features/memories";
 import { formatMemoryDate } from "@/lib/utils/format-memory-date";
 
 type MemoryDetailPageProps = {
@@ -16,7 +16,8 @@ type MemoryDetailPageProps = {
 
 export default async function MemoryDetailPage({ params }: MemoryDetailPageProps) {
   const { id } = await params;
-  const memory = await localMemoryCatalog.getById(id);
+  const catalog = await getMemoryCatalog();
+  const memory = await catalog.getById(id);
 
   if (!memory) {
     notFound();
@@ -60,14 +61,7 @@ export default async function MemoryDetailPage({ params }: MemoryDetailPageProps
               <EditIcon />
               <span className="sr-only">Editar recuerdo</span>
             </ButtonLink>
-            <Button
-              disabled
-              aria-label="Eliminar recuerdo"
-              title="La eliminación estará disponible al conectar la persistencia"
-              variant="quiet"
-            >
-              <TrashIcon />
-            </Button>
+            <DeleteMemoryButton memoryId={memory.id} />
           </div>
         </header>
       </Reveal>
