@@ -18,6 +18,18 @@ export type SpaceMemberRow = {
   space_id: string;
 };
 
+export type SpaceInviteRow = {
+  accepted_at: string | null;
+  accepted_by: string | null;
+  created_at: string;
+  created_by: string;
+  expires_at: string;
+  id: string;
+  invited_email: string | null;
+  space_id: string;
+  token_hash: string;
+};
+
 export type MemoryRow = {
   created_at: string;
   created_by: string;
@@ -66,6 +78,16 @@ export type Database = {
         Row: SpaceMemberRow;
         Insert: SpaceMemberRow;
         Update: Partial<Pick<SpaceMemberRow, "role">>;
+      };
+      space_invites: {
+        Row: SpaceInviteRow;
+        Insert: Omit<SpaceInviteRow, "id" | "created_at" | "accepted_at" | "accepted_by"> & {
+          accepted_at?: string | null;
+          accepted_by?: string | null;
+          created_at?: string;
+          id?: string;
+        };
+        Update: Partial<Pick<SpaceInviteRow, "accepted_at" | "accepted_by">>;
       };
       memories: {
         Row: MemoryRow;

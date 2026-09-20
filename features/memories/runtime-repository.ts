@@ -24,6 +24,14 @@ export async function getRuntimeMemoryRepository(): Promise<RuntimeMemoryReposit
       return { catalog: localMemoryCatalog, mode: "demo" };
     }
 
+    const { error: workspaceError } = await client.rpc(
+      "ensure_current_user_workspace",
+    );
+
+    if (workspaceError) {
+      throw workspaceError;
+    }
+
     const repository = createSupabaseMemoryRepository(client, user.id);
     return { catalog: repository, mode: "supabase", repository };
   } catch {
