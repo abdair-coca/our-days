@@ -7,11 +7,13 @@ import { StatusPanel } from "@/components/ui/status-panel";
 import type { MemoryPhoto } from "@/types/memory";
 
 type MemoryGalleryProps = {
+  featured?: boolean;
   photos: readonly MemoryPhoto[];
   state?: "loaded" | "loading" | "error";
 };
 
 export function MemoryGallery({
+  featured = true,
   photos,
   state = "loaded",
 }: MemoryGalleryProps) {
@@ -30,8 +32,8 @@ export function MemoryGallery({
             : { duration: 1.8, ease: "easeInOut", repeat: Infinity }
         }
       >
-        <div className="aspect-[4/3] animate-pulse rounded-3xl bg-ink/10 motion-reduce:animate-none sm:col-span-2" />
-        <div className="aspect-[4/3] animate-pulse rounded-3xl bg-ink/10 motion-reduce:animate-none" />
+        <div className="aspect-[4/3] animate-pulse rounded-[var(--radius-card)] bg-border-soft motion-reduce:animate-none sm:col-span-2" />
+        <div className="aspect-[4/3] animate-pulse rounded-[var(--radius-card)] bg-border-soft motion-reduce:animate-none" />
       </motion.div>
     );
   }
@@ -64,9 +66,9 @@ export function MemoryGallery({
         <motion.div
           aria-label={photo.alt}
           className={
-            index === 0
-              ? "aspect-[4/3] rounded-3xl bg-cover bg-center shadow-soft sm:col-span-2 sm:aspect-[16/9]"
-              : "aspect-[4/3] rounded-3xl bg-cover bg-center shadow-sm"
+            featured && index === 0
+              ? "aspect-[4/3] rounded-[var(--radius-card)] bg-cover bg-center shadow-[var(--shadow-floating)] sm:col-span-2 sm:aspect-[16/9]"
+              : "aspect-[4/3] rounded-[var(--radius-card)] bg-cover bg-center shadow-[var(--shadow-card)]"
           }
           key={photo.id}
           role="img"

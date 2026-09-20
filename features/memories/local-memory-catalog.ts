@@ -95,6 +95,7 @@ const generatedMemories: readonly Memory[] = Array.from(
     const year = 2026 - Math.floor(index / 6);
     const month = String((index % 6) + 1).padStart(2, "0");
     const day = String(((index * 3) % 20) + 1).padStart(2, "0");
+    const photoCount = index === 0 ? 5 : index === 1 ? 10 : 1;
 
     return {
       id: `shared-day-${String(index + 1).padStart(2, "0")}`,
@@ -103,13 +104,11 @@ const generatedMemories: readonly Memory[] = Array.from(
         "Una nota breve para conservar los detalles que hacen nuestro este día.",
       memoryDate: `${year}-${month}-${day}`,
       createdBy: index % 2 === 0 ? "Alizon" : "Abdair",
-      photos: [
-        {
-          id: `shared-photo-${String(index + 1).padStart(2, "0")}`,
-          alt: "Ilustración abstracta de un recuerdo compartido",
-          gradient: gradientPalette[index % gradientPalette.length],
-        },
-      ],
+      photos: Array.from({ length: photoCount }, (_, photoIndex) => ({
+        id: `shared-photo-${String(index + 1).padStart(2, "0")}-${photoIndex + 1}`,
+        alt: "Ilustración abstracta de un recuerdo compartido",
+        gradient: gradientPalette[(index + photoIndex) % gradientPalette.length],
+      })),
       song: null,
     } satisfies Memory;
   },
