@@ -36,10 +36,10 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
             <Link
               aria-current={selectedYear === null ? "page" : undefined}
               className={classNames(
-                "inline-flex min-h-11 items-center rounded-full border px-4 py-2 text-sm font-semibold transition",
+                "inline-flex min-h-11 items-center rounded-[var(--radius-button)] border px-4 py-2 text-sm font-semibold transition-[color,background-color,border-color,transform] duration-[var(--motion-fast)]",
                 selectedYear === null
-                  ? "border-blush bg-blush text-white"
-                  : "border-ink/15 bg-white/70 hover:border-blush/50",
+                  ? "border-accent bg-accent text-white"
+                  : "border-border bg-surface hover:-translate-y-px hover:border-accent-soft hover:bg-surface-soft",
               )}
               href="/memories"
             >
@@ -51,11 +51,11 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
               <Link
                 aria-current={selectedYear === availableYear ? "page" : undefined}
                 className={classNames(
-                  "inline-flex min-h-11 items-center rounded-full border px-4 py-2 text-sm font-semibold transition",
-                  selectedYear === availableYear
-                    ? "border-blush bg-blush text-white"
-                    : "border-ink/15 bg-white/70 hover:border-blush/50",
-                )}
+                    "inline-flex min-h-11 items-center rounded-[var(--radius-button)] border px-4 py-2 text-sm font-semibold transition-[color,background-color,border-color,transform] duration-[var(--motion-fast)]",
+                    selectedYear === availableYear
+                      ? "border-accent bg-accent text-white"
+                      : "border-border bg-surface hover:-translate-y-px hover:border-accent-soft hover:bg-surface-soft",
+                  )}
                 href={`/memories?year=${availableYear}`}
               >
                 {availableYear}

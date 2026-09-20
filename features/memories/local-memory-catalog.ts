@@ -2,7 +2,7 @@ import type { MemoryCatalog } from "@/features/memories/catalog";
 import { demoGradients } from "@/lib/images/demo-art";
 import type { Memory } from "@/types/memory";
 
-const memories = [
+const seedMemories = [
   {
     id: "sunset-train",
     title: "El tren de vuelta",
@@ -86,6 +86,36 @@ const memories = [
     song: null,
   },
 ] satisfies readonly Memory[];
+
+const gradientPalette = Object.values(demoGradients);
+
+const generatedMemories: readonly Memory[] = Array.from(
+  { length: 26 },
+  (_, index) => {
+    const year = 2026 - Math.floor(index / 6);
+    const month = String((index % 6) + 1).padStart(2, "0");
+    const day = String(((index * 3) % 20) + 1).padStart(2, "0");
+
+    return {
+      id: `shared-day-${String(index + 1).padStart(2, "0")}`,
+      title: `Un día compartido ${String(index + 1).padStart(2, "0")}`,
+      description:
+        "Una nota breve para conservar los detalles que hacen nuestro este día.",
+      memoryDate: `${year}-${month}-${day}`,
+      createdBy: index % 2 === 0 ? "Alizon" : "Abdair",
+      photos: [
+        {
+          id: `shared-photo-${String(index + 1).padStart(2, "0")}`,
+          alt: "Ilustración abstracta de un recuerdo compartido",
+          gradient: gradientPalette[index % gradientPalette.length],
+        },
+      ],
+      song: null,
+    } satisfies Memory;
+  },
+);
+
+const memories: readonly Memory[] = [...seedMemories, ...generatedMemories];
 
 export const localMemoryCatalog: MemoryCatalog = {
   async list() {
