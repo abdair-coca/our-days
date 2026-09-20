@@ -18,10 +18,15 @@ export async function getRuntimeMemoryRepository(): Promise<RuntimeMemoryReposit
   try {
     const {
       data: { user },
+      error: userError,
     } = await client.auth.getUser();
 
+    if (userError) {
+      throw userError;
+    }
+
     if (!user) {
-      return { catalog: localMemoryCatalog, mode: "demo" };
+      throw new Error("La sesión expiró. Vuelve a iniciar sesión.");
     }
 
     const { error: workspaceError } = await client.rpc(
@@ -34,8 +39,11 @@ export async function getRuntimeMemoryRepository(): Promise<RuntimeMemoryReposit
 
     const repository = createSupabaseMemoryRepository(client, user.id);
     return { catalog: repository, mode: "supabase", repository };
-  } catch {
-    return { catalog: localMemoryCatalog, mode: "demo" };
+  } catch (error) {
+    console.error("getRuntimeMemoryRepository failed", error);
+    throw error instanceof Error
+      ? error
+      : new Error("No pudimos comprobar tu sesión.");
   }
 }
 

@@ -60,6 +60,13 @@ function getSiteOrigin(): string {
   return "http://localhost:3000";
 }
 
+function connectionErrorState(): AuthActionState {
+  return {
+    ...initialAuthActionState,
+    error: "No pudimos conectar con Our Days. Revisa tu conexión e inténtalo de nuevo.",
+  };
+}
+
 export async function authAction(
   _previousState: AuthActionState,
   formData: FormData,
@@ -94,13 +101,20 @@ export async function authAction(
       };
     }
 
-    const { data, error } = await client.auth.signUp({
-      email,
-      password,
-      options: {
-        data: displayName ? { display_name: displayName } : undefined,
-      },
-    });
+    let data;
+    let error;
+
+    try {
+      ({ data, error } = await client.auth.signUp({
+        email,
+        password,
+        options: {
+          data: displayName ? { display_name: displayName } : undefined,
+        },
+      }));
+    } catch {
+      return connectionErrorState();
+    }
 
     if (error) {
       return { ...initialAuthActionState, error: authErrorMessage(error.message) };
@@ -117,7 +131,13 @@ export async function authAction(
     redirect(nextPath);
   }
 
-  const { error } = await client.auth.signInWithPassword({ email, password });
+  let error;
+
+  try {
+    ({ error } = await client.auth.signInWithPassword({ email, password }));
+  } catch {
+    return connectionErrorState();
+  }
 
   if (error) {
     return { ...initialAuthActionState, error: authErrorMessage(error.message) };
@@ -137,7 +157,13 @@ export async function createInviteAction(
   formData: FormData,
 ): Promise<AuthActionState> {
   const client = await createSupabaseServerClient();
-  const context = await getAuthContext();
+  let context;
+
+  try {
+    context = await getAuthContext();
+  } catch {
+    return connectionErrorState();
+  }
 
   if (!client || !context) {
     return {
@@ -162,13 +188,19 @@ export async function createInviteAction(
   const token = randomBytes(32).toString("base64url");
   const tokenHash = createHash("sha256").update(token).digest("hex");
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-  const { error } = await client.from("space_invites").insert({
-    created_by: context.user.id,
-    expires_at: expiresAt,
-    invited_email: invitedEmail || null,
-    space_id: context.space.id,
-    token_hash: tokenHash,
-  });
+  let error;
+
+  try {
+    ({ error } = await client.from("space_invites").insert({
+      created_by: context.user.id,
+      expires_at: expiresAt,
+      invited_email: invitedEmail || null,
+      space_id: context.space.id,
+      token_hash: tokenHash,
+    }));
+  } catch {
+    return connectionErrorState();
+  }
 
   if (error) {
     return {
@@ -208,9 +240,14 @@ export async function acceptInviteAction(
     };
   }
 
-  const {
-    data: { user },
-  } = await client.auth.getUser();
+  let user;
+
+  try {
+    const result = await client.auth.getUser();
+    user = result.data.user;
+  } catch {
+    return connectionErrorState();
+  }
 
   if (!user) {
     return {
@@ -219,9 +256,15 @@ export async function acceptInviteAction(
     };
   }
 
-  const { error } = await client.rpc("accept_space_invite", {
-    invite_token: token,
-  });
+  let error;
+
+  try {
+    ({ error } = await client.rpc("accept_space_invite", {
+      invite_token: token,
+    }));
+  } catch {
+    return connectionErrorState();
+  }
 
   if (error) {
     return {
