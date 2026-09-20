@@ -19,8 +19,8 @@ export default async function EditMemoryPage({ params }: EditMemoryPageProps) {
 
   return (
     <PageShell
-      eyebrow="Modo demostración"
-      intro="Los campos parten de los datos locales. Validar cambios no modifica el catálogo."
+      eyebrow="Editar recuerdo"
+      intro="Ajusta la historia, la fecha, las fotos o la canción cuando quieras."
       title={`Editar “${memory.title}”`}
     >
       <div className="max-w-5xl rounded-[var(--radius-modal)] border border-border-soft bg-surface p-5 shadow-[var(--shadow-card)] sm:p-8">

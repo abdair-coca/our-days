@@ -2,6 +2,7 @@
 
 import type { ChangeEvent } from "react";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { FieldError, Resolver } from "react-hook-form";
 import { useForm, useWatch } from "react-hook-form";
 
@@ -104,6 +105,7 @@ export function MemoryForm({
   memoryId,
   mode,
 }: MemoryFormProps) {
+  const router = useRouter();
   const demoSubmit = useDemoSubmit();
   const [photos, setPhotos] = useState<PhotoDraft[]>(() =>
     createInitialPhotos(initialPhotos),
@@ -180,7 +182,7 @@ export function MemoryForm({
       formData.append("photoOrder", JSON.stringify(descriptors));
       setIsPreparingPhotos(false);
 
-      await demoSubmit.submit(() => {
+      const result = await demoSubmit.submit(() => {
         if (mode === "edit" && memoryId) {
           return updateMemoryAction(memoryId, formData);
         }
@@ -195,6 +197,11 @@ export function MemoryForm({
 
         return createMemoryAction(formData);
       });
+
+      if (result.ok && result.mode === "supabase" && result.memoryId) {
+        router.push(`/memories/${result.memoryId}`);
+        router.refresh();
+      }
     } catch (error) {
       setIsPreparingPhotos(false);
       setPhotoProgress({ completed: 0, total: 0 });

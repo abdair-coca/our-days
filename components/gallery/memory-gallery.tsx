@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
+import type { ReactNode } from "react";
 
 /* Signed Supabase URLs are private and dynamic, so native loading is intentional. */
 /* eslint-disable @next/next/no-img-element */
@@ -10,12 +11,14 @@ import { StatusPanel } from "@/components/ui/status-panel";
 import type { MemoryPhoto } from "@/types/memory";
 
 type MemoryGalleryProps = {
+  emptyAction?: ReactNode;
   featured?: boolean;
   photos: readonly MemoryPhoto[];
   state?: "loaded" | "loading" | "error";
 };
 
 export function MemoryGallery({
+  emptyAction,
   featured = true,
   photos,
   state = "loaded",
@@ -51,8 +54,8 @@ export function MemoryGallery({
 
   if (photos.length === 0) {
     return (
-      <StatusPanel title="Este recuerdo todavía no tiene fotos">
-        Puedes añadirlas cuando la carga de imágenes esté conectada.
+      <StatusPanel action={emptyAction} title="Este recuerdo todavía no tiene fotos">
+        Puedes añadirlas desde Editar recuerdo cuando quieras.
       </StatusPanel>
     );
   }

@@ -11,6 +11,7 @@ import { memoryFormSchema } from "@/lib/validations/memory";
 
 export type MemoryMutationResult = {
   message: string;
+  memoryId?: string;
   mode: "demo" | "supabase";
   ok: boolean;
 };
@@ -147,6 +148,7 @@ export async function createMemoryAction(
     revalidatePath("/memories");
     return {
       message: "Recuerdo guardado en el espacio compartido.",
+      memoryId: memory.id,
       mode: "supabase",
       ok: true,
     };
@@ -185,6 +187,7 @@ export async function updateMemoryAction(
     revalidatePath(`/memories/${id}/edit`);
     return {
       message: "Cambios guardados en el espacio compartido.",
+      memoryId: memory.id,
       mode: "supabase",
       ok: true,
     };

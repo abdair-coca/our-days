@@ -40,7 +40,19 @@ export default async function MemoryDetailPage({ params }: MemoryDetailPageProps
         <div className="-mx-4 mt-4 sm:mx-0 sm:mt-6">
           <MemoryGallery photos={[cover]} />
         </div>
-      ) : null}
+      ) : (
+        <div className="mt-6">
+          <MemoryGallery
+            emptyAction={
+              <ButtonLink href={`/memories/${memory.id}/edit`} variant="secondary">
+                <EditIcon />
+                Añadir fotos
+              </ButtonLink>
+            }
+            photos={[]}
+          />
+        </div>
+      )}
 
       <Reveal>
         <header className="mt-8 grid gap-6 border-b border-border-soft pb-8 sm:mt-10 sm:pb-10 lg:grid-cols-[1fr_auto] lg:items-end">

@@ -22,7 +22,7 @@ export default function AppError({
         No pudimos abrir este momento.
       </h1>
       <p className="mt-4 text-muted">
-        Puedes intentarlo otra vez. Tus datos de demostración siguen intactos.
+        Puedes intentarlo otra vez. Tus recuerdos guardados siguen a salvo.
       </p>
       <button
         className="mt-7 min-h-12 rounded-full bg-blush px-6 py-3 font-semibold text-white hover:bg-blush-dark"

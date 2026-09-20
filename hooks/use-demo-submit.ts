@@ -4,6 +4,8 @@ import { useState } from "react";
 
 export type DemoSubmitResult = {
   message: string;
+  memoryId?: string;
+  mode?: "demo" | "supabase";
   ok: boolean;
 };
 
@@ -14,7 +16,7 @@ export function useDemoSubmit() {
   const [state, setState] = useState<DemoSubmitState>("idle");
   const [message, setMessage] = useState("");
 
-  async function submit(task?: SubmitTask) {
+  async function submit(task?: SubmitTask): Promise<DemoSubmitResult> {
     setState("submitting");
 
     try {
