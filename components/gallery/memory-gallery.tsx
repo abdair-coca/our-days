@@ -2,6 +2,9 @@
 
 import { motion, useReducedMotion } from "motion/react";
 
+/* Signed Supabase URLs are private and dynamic, so native loading is intentional. */
+/* eslint-disable @next/next/no-img-element */
+
 import { fadeUp, staggerContainer } from "@/components/motion/variants";
 import { StatusPanel } from "@/components/ui/status-panel";
 import type { MemoryPhoto } from "@/types/memory";
@@ -64,17 +67,27 @@ export function MemoryGallery({
     >
       {photos.map((photo, index) => (
         <motion.div
-          aria-label={photo.alt}
+          aria-label={photo.src ? undefined : photo.alt}
           className={
             featured && index === 0
-              ? "aspect-[4/3] rounded-[var(--radius-card)] bg-cover bg-center shadow-[var(--shadow-floating)] sm:col-span-2 sm:aspect-[16/9]"
-              : "aspect-[4/3] rounded-[var(--radius-card)] bg-cover bg-center shadow-[var(--shadow-card)]"
+              ? "aspect-[4/3] overflow-hidden rounded-[var(--radius-card)] bg-surface-soft bg-cover bg-center shadow-[var(--shadow-floating)] sm:col-span-2 sm:aspect-[16/9]"
+              : "aspect-[4/3] overflow-hidden rounded-[var(--radius-card)] bg-surface-soft bg-cover bg-center shadow-[var(--shadow-card)]"
           }
           key={photo.id}
-          role="img"
-          style={{ backgroundImage: photo.gradient }}
+          role={photo.src ? undefined : "img"}
+          style={{ backgroundImage: photo.src ? undefined : photo.gradient }}
           variants={fadeUp}
-        />
+        >
+          {photo.src ? (
+            <img
+              alt={photo.alt}
+              className="size-full object-cover"
+              decoding="async"
+              loading={featured && index === 0 ? "eager" : "lazy"}
+              src={photo.src}
+            />
+          ) : null}
+        </motion.div>
       ))}
     </motion.div>
   );

@@ -1,5 +1,8 @@
 import Link from "next/link";
 
+/* Signed Supabase URLs are private and dynamic, so native loading is intentional. */
+/* eslint-disable @next/next/no-img-element */
+
 import { MemoryCard } from "@/components/memory/memory-card";
 import { Reveal } from "@/components/motion/reveal";
 import { ButtonLink } from "@/components/ui/button-link";
@@ -47,11 +50,25 @@ export default async function HomePage() {
               href={`/memories/${featured.id}`}
             >
               <div
-                aria-label={featured.photos[0]?.alt}
-                className="aspect-[4/3] rounded-[var(--radius-card)] bg-cover bg-center transition duration-[var(--motion-normal)] group-hover:scale-[1.015]"
-                role="img"
-                style={{ backgroundImage: featured.photos[0]?.gradient }}
-              />
+                aria-label={featured.photos[0]?.src ? undefined : featured.photos[0]?.alt}
+                className="aspect-[4/3] overflow-hidden rounded-[var(--radius-card)] bg-cover bg-center transition duration-[var(--motion-normal)] group-hover:scale-[1.015]"
+                role={featured.photos[0]?.src ? undefined : "img"}
+                style={{
+                  backgroundImage: featured.photos[0]?.src
+                    ? undefined
+                    : featured.photos[0]?.gradient,
+                }}
+              >
+                {featured.photos[0]?.src ? (
+                  <img
+                    alt={featured.photos[0].alt}
+                    className="size-full object-cover"
+                    decoding="async"
+                    loading="eager"
+                    src={featured.photos[0].src}
+                  />
+                ) : null}
+              </div>
               <div className="mt-4 flex items-end justify-between gap-4">
                 <div>
                   <p className="text-xs font-bold tracking-[0.14em] text-accent-hover uppercase">

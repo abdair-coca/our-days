@@ -1,6 +1,9 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
+
+/* Signed Supabase URLs are private and dynamic, so native loading is intentional. */
+/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 
 import { cardHover, imageHover } from "@/components/motion/variants";
@@ -33,12 +36,22 @@ export function MemoryCard({ memory, priority = false }: MemoryCardProps) {
         prefetch={priority}
       >
         <motion.div
-          aria-label={cover?.alt ?? "Recuerdo sin imagen"}
-          className="aspect-[4/3] w-full bg-[#eadfd7]"
-          role="img"
-          style={{ backgroundImage: cover?.gradient }}
+          aria-label={cover?.src ? undefined : cover?.alt ?? "Recuerdo sin imagen"}
+          className="aspect-[4/3] w-full overflow-hidden bg-[#eadfd7]"
+          role={cover?.src ? undefined : "img"}
+          style={{ backgroundImage: cover?.src ? undefined : cover?.gradient }}
           variants={imageHover}
-        />
+        >
+          {cover?.src ? (
+            <img
+              alt={cover.alt}
+              className="size-full object-cover"
+              decoding="async"
+              loading={priority ? "eager" : "lazy"}
+              src={cover.src}
+            />
+          ) : null}
+        </motion.div>
         <div className="p-5">
           <time
             className="text-xs font-bold tracking-[0.14em] text-blush-dark uppercase"
