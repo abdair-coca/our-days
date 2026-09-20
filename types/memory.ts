@@ -1,7 +1,13 @@
 export type MemoryPhoto = {
   id: string;
   alt: string;
+  byteSize?: number;
   gradient: string;
+  height?: number;
+  mimeType?: string;
+  src?: string;
+  storagePath?: string;
+  width?: number;
 };
 
 export type MemorySong = {

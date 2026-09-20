@@ -34,12 +34,16 @@ export type MemoryRow = {
 
 export type MemoryPhotoRow = {
   alt_text: string;
+  byte_size: number | null;
   created_at: string;
+  height: number | null;
   id: string;
   memory_id: string;
+  mime_type: string | null;
   sort_order: number;
   storage_path: string | null;
   visual_value: string | null;
+  width: number | null;
 };
 
 export type Database = {
