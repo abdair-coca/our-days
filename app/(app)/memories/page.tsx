@@ -3,6 +3,7 @@ import Link from "next/link";
 import { MemoryGrid } from "@/components/memory/memory-grid";
 import { PageShell } from "@/components/layout/page-shell";
 import { ButtonLink } from "@/components/ui/button-link";
+import { PlusIcon } from "@/components/ui/icons";
 import { localMemoryCatalog } from "@/features/memories";
 import { classNames } from "@/lib/utils/class-names";
 
@@ -25,7 +26,17 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
 
   return (
     <PageShell
-      actions={<ButtonLink href="/memories/new">Nuevo recuerdo</ButtonLink>}
+      actions={
+        <ButtonLink
+          aria-label="Nuevo recuerdo"
+          className="px-3"
+          href="/memories/new"
+          title="Nuevo recuerdo"
+        >
+          <PlusIcon />
+          <span className="sr-only">Nuevo recuerdo</span>
+        </ButtonLink>
+      }
       eyebrow="Línea de tiempo"
       intro="Un recorrido cronológico por lo que hemos ido guardando."
       title="Nuestros recuerdos"

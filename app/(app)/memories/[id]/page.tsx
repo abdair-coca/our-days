@@ -6,6 +6,7 @@ import { Reveal } from "@/components/motion/reveal";
 import { SongCard } from "@/components/music/song-card";
 import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button-link";
+import { ArrowLeftIcon, EditIcon, TrashIcon } from "@/components/ui/icons";
 import { localMemoryCatalog } from "@/features/memories";
 import { formatMemoryDate } from "@/lib/utils/format-memory-date";
 
@@ -26,13 +27,12 @@ export default async function MemoryDetailPage({ params }: MemoryDetailPageProps
   return (
     <article className="container-editorial py-8 sm:py-12">
       <Link
-        className="inline-flex min-h-11 items-center rounded-[var(--radius-button)] px-3 text-sm font-semibold text-accent-hover transition-[color,background-color,transform] duration-[var(--motion-fast)] hover:-translate-x-1 hover:bg-accent-soft/45"
+        aria-label="Volver a recuerdos"
+        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-button)] px-3 text-accent-hover transition-[color,background-color,transform] duration-[var(--motion-fast)] hover:-translate-x-1 hover:bg-accent-soft/45"
         href="/memories"
+        title="Volver a recuerdos"
       >
-        <span aria-hidden="true" className="mr-2 text-lg">
-          ←
-        </span>
-        Volver a recuerdos
+        <ArrowLeftIcon />
       </Link>
 
       {cover ? (
@@ -57,14 +57,16 @@ export default async function MemoryDetailPage({ params }: MemoryDetailPageProps
           </div>
           <div className="flex flex-wrap gap-2 lg:justify-end">
             <ButtonLink href={`/memories/${memory.id}/edit`} variant="secondary">
-              Editar recuerdo
+              <EditIcon />
+              <span className="sr-only">Editar recuerdo</span>
             </ButtonLink>
             <Button
               disabled
+              aria-label="Eliminar recuerdo"
               title="La eliminación estará disponible al conectar la persistencia"
               variant="quiet"
             >
-              Eliminar recuerdo
+              <TrashIcon />
             </Button>
           </div>
         </header>
