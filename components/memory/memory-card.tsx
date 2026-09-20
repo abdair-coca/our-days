@@ -1,6 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
+import { useState } from "react";
 
 /* Signed Supabase URLs are private and dynamic, so native loading is intentional. */
 /* eslint-disable @next/next/no-img-element */
@@ -17,7 +19,21 @@ type MemoryCardProps = {
 
 export function MemoryCard({ memory, priority = false }: MemoryCardProps) {
   const cover = memory.photos[0];
+  const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
+  const [imageState, setImageState] = useState<"ready" | "refreshing" | "failed">(
+    "ready",
+  );
+
+  function handleImageError() {
+    if (imageState === "ready") {
+      setImageState("refreshing");
+      router.refresh();
+      return;
+    }
+
+    setImageState("failed");
+  }
 
   return (
     <motion.article
@@ -36,20 +52,36 @@ export function MemoryCard({ memory, priority = false }: MemoryCardProps) {
         prefetch={priority}
       >
         <motion.div
-          aria-label={cover?.src ? undefined : cover?.alt ?? "Recuerdo sin imagen"}
+          aria-busy={imageState === "refreshing" || undefined}
+          aria-label={
+            imageState === "failed"
+              ? `${cover?.alt ?? "Imagen del recuerdo"}. No pudimos cargar esta foto.`
+              : cover?.src
+                ? undefined
+                : cover?.alt ?? "Recuerdo sin imagen"
+          }
           className="aspect-[4/3] w-full overflow-hidden bg-[#eadfd7]"
-          role={cover?.src ? undefined : "img"}
-          style={{ backgroundImage: cover?.src ? undefined : cover?.gradient }}
+          role={cover?.src && imageState !== "failed" ? undefined : "img"}
+          style={{
+            backgroundImage:
+              cover?.src && imageState !== "failed" ? undefined : cover?.gradient,
+          }}
           variants={imageHover}
         >
-          {cover?.src ? (
+          {cover?.src && imageState !== "failed" ? (
             <img
               alt={cover.alt}
               className="size-full object-cover"
               decoding="async"
               loading={priority ? "eager" : "lazy"}
+              onError={handleImageError}
+              onLoad={() => setImageState("ready")}
               src={cover.src}
             />
+          ) : imageState === "failed" ? (
+            <div className="grid size-full place-items-center bg-surface/75 p-4 text-center">
+              <span className="text-sm font-semibold text-text">Imagen no disponible</span>
+            </div>
           ) : null}
         </motion.div>
         <div className="p-5">

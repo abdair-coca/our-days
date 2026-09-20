@@ -1,12 +1,15 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import type { ReactNode } from "react";
+import { useState } from "react";
 
 /* Signed Supabase URLs are private and dynamic, so native loading is intentional. */
 /* eslint-disable @next/next/no-img-element */
 
 import { fadeUp, staggerContainer } from "@/components/motion/variants";
+import { Button } from "@/components/ui/button";
 import { StatusPanel } from "@/components/ui/status-panel";
 import type { MemoryPhoto } from "@/types/memory";
 
@@ -23,7 +26,51 @@ export function MemoryGallery({
   photos,
   state = "loaded",
 }: MemoryGalleryProps) {
+  const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
+  const [failedPhotoIds, setFailedPhotoIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [refreshingPhotoIds, setRefreshingPhotoIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+
+  function handlePhotoError(id: string) {
+    if (!refreshingPhotoIds.has(id)) {
+      setRefreshingPhotoIds((current) => new Set(current).add(id));
+      router.refresh();
+      return;
+    }
+
+    setFailedPhotoIds((current) => new Set(current).add(id));
+  }
+
+  function handlePhotoLoad(id: string) {
+    setRefreshingPhotoIds((current) => {
+      const next = new Set(current);
+      next.delete(id);
+      return next;
+    });
+    setFailedPhotoIds((current) => {
+      const next = new Set(current);
+      next.delete(id);
+      return next;
+    });
+  }
+
+  function retryPhoto(id: string) {
+    setFailedPhotoIds((current) => {
+      const next = new Set(current);
+      next.delete(id);
+      return next;
+    });
+    setRefreshingPhotoIds((current) => {
+      const next = new Set(current);
+      next.delete(id);
+      return next;
+    });
+    router.refresh();
+  }
 
   if (state === "loading") {
     return (
@@ -70,25 +117,52 @@ export function MemoryGallery({
     >
       {photos.map((photo, index) => (
         <motion.div
-          aria-label={photo.src ? undefined : photo.alt}
+          aria-busy={refreshingPhotoIds.has(photo.id) || undefined}
+          aria-label={
+            failedPhotoIds.has(photo.id)
+              ? `${photo.alt}. No pudimos cargar esta foto.`
+              : photo.src
+                ? undefined
+                : photo.alt
+          }
           className={
             featured && index === 0
               ? "aspect-[4/3] overflow-hidden rounded-[var(--radius-card)] bg-surface-soft bg-cover bg-center shadow-[var(--shadow-floating)] sm:col-span-2 sm:aspect-[16/9]"
               : "aspect-[4/3] overflow-hidden rounded-[var(--radius-card)] bg-surface-soft bg-cover bg-center shadow-[var(--shadow-card)]"
           }
           key={photo.id}
-          role={photo.src ? undefined : "img"}
-          style={{ backgroundImage: photo.src ? undefined : photo.gradient }}
+          role={photo.src && !failedPhotoIds.has(photo.id) ? undefined : "img"}
+          style={{
+            backgroundImage:
+              photo.src && !failedPhotoIds.has(photo.id)
+                ? undefined
+                : photo.gradient,
+          }}
           variants={fadeUp}
         >
-          {photo.src ? (
+          {photo.src && !failedPhotoIds.has(photo.id) ? (
             <img
               alt={photo.alt}
               className="size-full object-cover"
               decoding="async"
               loading={featured && index === 0 ? "eager" : "lazy"}
+              onError={() => handlePhotoError(photo.id)}
+              onLoad={() => handlePhotoLoad(photo.id)}
               src={photo.src}
             />
+          ) : failedPhotoIds.has(photo.id) ? (
+            <div className="grid size-full place-items-center bg-surface/75 p-6 text-center">
+              <div>
+                <p className="text-sm font-semibold text-text">No pudimos cargar esta foto.</p>
+                <Button
+                  className="mt-3 px-4 py-2"
+                  onClick={() => retryPhoto(photo.id)}
+                  variant="secondary"
+                >
+                  Reintentar
+                </Button>
+              </div>
+            </div>
           ) : null}
         </motion.div>
       ))}
