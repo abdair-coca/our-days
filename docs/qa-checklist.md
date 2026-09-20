@@ -18,7 +18,7 @@ La aplicación tiene una base verificable de performance y resiliencia. Este doc
 | --- | --- | --- |
 | TypeScript | ✅ | `npx tsc --noEmit --incremental false` |
 | Lint | ✅ | `npm run lint` |
-| Build de producción | ⏳ | Ejecutar el quick path tras cambios locales |
+| Build de producción | ✅ | `npm run build -- --webpack` |
 | Sesión sin autenticar | ✅ | `/memories` redirige a `/login?next=%2Fmemories` |
 | Falla de Supabase | ✅ | El runtime ya no vuelve silenciosamente al catálogo demo |
 | Error de login/invitación | ✅ | Devuelve mensaje de conexión recuperable |
