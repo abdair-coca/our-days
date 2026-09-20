@@ -106,6 +106,7 @@ export function createSupabaseMemoryRepository(
       .from("space_members")
       .select("space_id")
       .eq("profile_id", userId)
+      .order("role", { ascending: true })
       .order("joined_at", { ascending: true })
       .limit(1)
       .maybeSingle();
