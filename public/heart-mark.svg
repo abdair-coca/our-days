@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Our Days</title>
+  <desc id="desc">Dos formas redondeadas unidas como un corazón</desc>
+  <defs>
+    <linearGradient id="warm" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EAA99D"/>
+      <stop offset="1" stop-color="#9B4F55"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#warm)" d="M32 55C23 48 8 38 8 23 8 14 14 9 22 9c5 0 8 2 10 6 2-4 5-6 10-6 8 0 14 5 14 14 0 15-15 25-24 32Z"/>
+</svg>
