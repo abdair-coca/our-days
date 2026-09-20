@@ -8,7 +8,7 @@ export default function NewMemoryPage() {
       intro="Prueba la estructura y validación del formulario. Las fotos y los datos permanecen solo en este navegador durante la interacción."
       title="Guardar un recuerdo"
     >
-      <div className="max-w-3xl rounded-[2rem] border border-ink/8 bg-card p-5 shadow-soft sm:p-8">
+      <div className="max-w-5xl rounded-[var(--radius-modal)] border border-border-soft bg-surface p-5 shadow-[var(--shadow-card)] sm:p-8">
         <MemoryForm mode="create" />
       </div>
     </PageShell>

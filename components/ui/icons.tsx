@@ -36,6 +36,14 @@ export function ArrowLeftIcon(props: IconProps) {
   );
 }
 
+export function CheckIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="m5 12 4.5 4.5L19 7" />
+    </IconBase>
+  );
+}
+
 export function EditIcon(props: IconProps) {
   return (
     <IconBase {...props}>
@@ -51,6 +59,22 @@ export function ExternalLinkIcon(props: IconProps) {
       <path d="M14 3h7v7" />
       <path d="m10 14 11-11" />
       <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
+    </IconBase>
+  );
+}
+
+export function ChevronDownIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="m6 9 6 6 6-6" />
+    </IconBase>
+  );
+}
+
+export function ChevronUpIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="m18 15-6-6-6 6" />
     </IconBase>
   );
 }
@@ -71,6 +95,16 @@ export function ImagesIcon(props: IconProps) {
       <rect height="14" rx="2" width="17" x="3.5" y="5" />
       <circle cx="8.5" cy="10" r="1.25" />
       <path d="m4 17 4.5-4 3.5 3 2.5-2 5 4" />
+    </IconBase>
+  );
+}
+
+export function ImagePlusIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <rect height="14" rx="2" width="17" x="3.5" y="5" />
+      <path d="m4 17 4.5-4 3.5 3 2.5-2 5 4" />
+      <path d="M18 3v6M15 6h6" />
     </IconBase>
   );
 }

@@ -22,7 +22,7 @@ export default async function EditMemoryPage({ params }: EditMemoryPageProps) {
       intro="Los campos parten de los datos locales. Validar cambios no modifica el catálogo."
       title={`Editar “${memory.title}”`}
     >
-      <div className="max-w-3xl rounded-[2rem] border border-ink/8 bg-card p-5 shadow-soft sm:p-8">
+      <div className="max-w-5xl rounded-[var(--radius-modal)] border border-border-soft bg-surface p-5 shadow-[var(--shadow-card)] sm:p-8">
         <MemoryForm
           defaultValues={{
             title: memory.title,
@@ -32,6 +32,7 @@ export default async function EditMemoryPage({ params }: EditMemoryPageProps) {
             songArtist: memory.song?.artist ?? "",
             songUrl: memory.song?.url ?? "",
           }}
+          initialPhotos={memory.photos}
           mode="edit"
         />
       </div>
