@@ -9,6 +9,8 @@ import {
   createMemoryAction,
   updateMemoryAction,
 } from "@/features/memories/mutations";
+import { processImage } from "@/features/photos/image-processing";
+import { photoGuidelines } from "@/features/photos/photo-guidelines";
 import { useDemoSubmit } from "@/hooks/use-demo-submit";
 import { memoryFormSchema, type MemoryFormValues } from "@/lib/validations/memory";
 import type { MemoryPhoto } from "@/types/memory";
@@ -32,11 +34,16 @@ type MemoryFormProps = {
 };
 
 type PhotoDraft = {
+  byteSize?: number;
   file?: File;
   gradient?: string;
+  height?: number;
   id: string;
+  mimeType?: string;
   name: string;
   preview?: string;
+  storagePath?: string;
+  width?: number;
 };
 
 const emptyValues: MemoryFormValues = {
@@ -67,9 +74,14 @@ const memoryResolver: Resolver<MemoryFormValues> = async (values) => {
 
 function createInitialPhotos(photos: readonly MemoryPhoto[] = []): PhotoDraft[] {
   return photos.map((photo, index) => ({
+    byteSize: photo.byteSize,
     gradient: photo.gradient,
-    id: `initial-${photo.id}-${index}`,
+    height: photo.height,
+    id: photo.id || `initial-${index}`,
+    mimeType: photo.mimeType,
     name: photo.alt,
+    storagePath: photo.storagePath,
+    width: photo.width,
   }));
 }
 
@@ -108,6 +120,10 @@ export function MemoryForm({
   });
   const previewValues = useWatch({ control });
   const isSubmitting = demoSubmit.state === "submitting";
+  const [isPreparingPhotos, setIsPreparingPhotos] = useState(false);
+  const [photoProgress, setPhotoProgress] = useState({ completed: 0, total: 0 });
+  const [photoError, setPhotoError] = useState("");
+  const isBusy = isSubmitting || isPreparingPhotos;
 
   useEffect(() => {
     const urls = previewUrls.current;
@@ -120,33 +136,105 @@ export function MemoryForm({
   }, []);
 
   const onSubmit = handleSubmit(async (values) => {
-    const input = {
-      ...values,
-      photos: photos.map((photo) => ({
-        alt: photo.name,
-        id: photo.id,
-        visualValue: photo.gradient,
-      })),
-    };
+    setPhotoError("");
+    setIsPreparingPhotos(true);
+    setPhotoProgress({
+      completed: 0,
+      total: photos.filter((photo) => photo.file).length,
+    });
 
-    await demoSubmit.submit(() => {
-      if (mode === "edit" && memoryId) {
-        return updateMemoryAction(memoryId, input);
+    try {
+      const formData = new FormData();
+
+      for (const [key, value] of Object.entries(values)) {
+        formData.append(key, value);
       }
 
-      if (mode === "edit") {
-        return Promise.resolve({
-          message: "No encontramos el recuerdo que quieres editar.",
-          ok: false,
+      const descriptors = [];
+
+      for (const photo of photos) {
+        let processed;
+
+        if (photo.file) {
+          processed = await processImage(photo.file);
+          formData.append(`photo:${photo.id}`, processed.file, processed.file.name);
+          setPhotoProgress((current) => ({
+            ...current,
+            completed: current.completed + 1,
+          }));
+        }
+
+        descriptors.push({
+          alt: photo.name,
+          byteSize: processed?.byteSize ?? photo.byteSize,
+          height: processed?.height ?? photo.height,
+          id: photo.id,
+          mimeType: processed?.mimeType ?? photo.mimeType,
+          storagePath: photo.storagePath,
+          visualValue:
+            processed || photo.storagePath ? undefined : photo.gradient,
+          width: processed?.width ?? photo.width,
         });
       }
 
-      return createMemoryAction(input);
-    });
+      formData.append("photoOrder", JSON.stringify(descriptors));
+      setIsPreparingPhotos(false);
+
+      await demoSubmit.submit(() => {
+        if (mode === "edit" && memoryId) {
+          return updateMemoryAction(memoryId, formData);
+        }
+
+        if (mode === "edit") {
+          return Promise.resolve({
+            message: "No encontramos el recuerdo que quieres editar.",
+            mode: "supabase" as const,
+            ok: false,
+          });
+        }
+
+        return createMemoryAction(formData);
+      });
+    } catch (error) {
+      setIsPreparingPhotos(false);
+      setPhotoProgress({ completed: 0, total: 0 });
+      setPhotoError(
+        error instanceof Error
+          ? error.message
+          : "No pudimos preparar las fotos. Inténtalo de nuevo.",
+      );
+    }
   });
 
   function handlePhotosChange(event: ChangeEvent<HTMLInputElement>) {
     const selectedFiles = Array.from(event.target.files ?? []);
+    const availableSlots = photoGuidelines.maxFiles - photos.length;
+    const invalidType = selectedFiles.find(
+      (file) => !photoGuidelines.acceptedTypes.some((type) => type === file.type),
+    );
+    const oversizedFile = selectedFiles.find(
+      (file) => file.size > photoGuidelines.maxSourceSizeBytes,
+    );
+
+    if (selectedFiles.length > availableSlots) {
+      setPhotoError(`Puedes añadir hasta ${photoGuidelines.maxFiles} fotos.`);
+      event.target.value = "";
+      return;
+    }
+
+    if (invalidType) {
+      setPhotoError("Usa fotos JPG, PNG o WebP.");
+      event.target.value = "";
+      return;
+    }
+
+    if (oversizedFile) {
+      setPhotoError("Cada foto debe pesar menos de 12 MB antes de optimizarla.");
+      event.target.value = "";
+      return;
+    }
+
+    setPhotoError("");
 
     setPhotos((current) => [
       ...current,
@@ -197,16 +285,17 @@ export function MemoryForm({
 
   return (
     <form
+      aria-busy={isBusy}
       className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]"
       noValidate
       onSubmit={onSubmit}
     >
       <div className="space-y-8">
         <div className="rounded-[var(--radius-card)] border border-accent-soft bg-accent-soft/35 p-4 text-sm leading-6 text-text">
-          Modo demostración: puedes validar, ordenar y previsualizar el recuerdo. Nada se guarda todavía.
+          Tus fotos se redimensionan y comprimen antes de subirlas para cuidar la calidad y el espacio.
         </div>
 
-        <fieldset className="grid gap-5" disabled={isSubmitting}>
+        <fieldset className="grid gap-5" disabled={isBusy}>
           <legend className="font-serif text-2xl font-semibold">El recuerdo</legend>
           <Input
             error={errors.title?.message}
@@ -235,7 +324,7 @@ export function MemoryForm({
           />
         </fieldset>
 
-        <fieldset className="grid gap-5" disabled={isSubmitting}>
+        <fieldset className="grid gap-5" disabled={isBusy}>
           <legend className="font-serif text-2xl font-semibold">Fotos</legend>
           <div className="flex items-end justify-between gap-4">
             <p className="text-sm text-text-soft">La primera será la portada del recuerdo.</p>
@@ -254,6 +343,11 @@ export function MemoryForm({
               type="file"
             />
           </label>
+          {photoError ? (
+            <p className="text-sm font-semibold text-error" role="alert">
+              {photoError}
+            </p>
+          ) : null}
 
           {photos.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -315,7 +409,7 @@ export function MemoryForm({
           )}
         </fieldset>
 
-        <fieldset className="grid gap-5" disabled={isSubmitting}>
+        <fieldset className="grid gap-5" disabled={isBusy}>
           <legend className="font-serif text-2xl font-semibold">Canción opcional</legend>
           <div className="grid gap-5 sm:grid-cols-2">
             <Input
@@ -344,11 +438,20 @@ export function MemoryForm({
         </fieldset>
 
         <div className="flex flex-col gap-3 border-t border-border-soft pt-6 sm:flex-row sm:items-center">
-          <Button disabled={isSubmitting} loading={isSubmitting} type="submit">
-            {mode === "create" ? "Probar creación" : "Probar cambios"}
+          <Button
+            disabled={isBusy}
+            loading={isBusy}
+            loadingLabel={isPreparingPhotos ? "Preparando fotos…" : "Guardando…"}
+            type="submit"
+          >
+            {mode === "create" ? "Guardar recuerdo" : "Guardar cambios"}
           </Button>
           <p aria-live="polite" className="text-sm text-text-soft">
-            {demoSubmit.state === "success"
+            {isPreparingPhotos
+              ? photoProgress.total > 0
+                ? `Preparando fotos ${photoProgress.completed}/${photoProgress.total}…`
+                : "Preparando fotos…"
+              : demoSubmit.state === "success"
               ? demoSubmit.message
               : demoSubmit.state === "error"
                 ? demoSubmit.message

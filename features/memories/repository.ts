@@ -4,8 +4,14 @@ import type { MemoryCatalog } from "@/features/memories/catalog";
 
 export type MemoryPhotoInput = {
   alt: string;
+  byteSize?: number;
+  file?: File;
+  height?: number;
   id?: string;
+  mimeType?: string;
+  storagePath?: string;
   visualValue?: string;
+  width?: number;
 };
 
 export type MemoryMutationInput = {
