@@ -1,3 +1,7 @@
+"use client";
+
+import { motion, useReducedMotion } from "motion/react";
+
 import type { MemorySong } from "@/types/memory";
 
 type SongCardProps = {
@@ -5,6 +9,8 @@ type SongCardProps = {
 };
 
 export function SongCard({ song }: SongCardProps) {
+  const shouldReduceMotion = useReducedMotion();
+
   if (!song) {
     return (
       <section className="rounded-3xl border border-dashed border-ink/15 p-5">
@@ -15,7 +21,11 @@ export function SongCard({ song }: SongCardProps) {
   }
 
   return (
-    <section className="rounded-3xl border border-ink/10 bg-white/70 p-5">
+    <motion.section
+      className="rounded-3xl border border-ink/10 bg-white/70 p-5"
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      whileHover={shouldReduceMotion ? undefined : { y: -2 }}
+    >
       <p className="text-xs font-bold tracking-[0.14em] text-sage uppercase">
         Canción del recuerdo
       </p>
@@ -30,6 +40,6 @@ export function SongCard({ song }: SongCardProps) {
         Abrir enlace musical
         <span className="sr-only"> en una pestaña nueva</span>
       </a>
-    </section>
+    </motion.section>
   );
 }

@@ -9,32 +9,34 @@ type AppFrameProps = {
 
 export function AppFrame({ children }: AppFrameProps) {
   return (
-    <div className="min-h-screen pb-24 md:pb-0">
+    <div className="app-frame min-h-dvh overflow-x-clip">
       <a
-        className="fixed top-3 left-3 z-50 -translate-y-20 rounded-full bg-ink px-4 py-3 text-sm font-semibold text-white transition focus:translate-y-0"
+        className="fixed top-3 left-3 z-50 -translate-y-20 rounded-button bg-ink px-4 py-3 text-sm font-semibold text-white transition focus:translate-y-0"
         href="#main-content"
       >
         Saltar al contenido
       </a>
-      <header className="border-b border-ink/8 bg-paper/85 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+      <header className="app-header border-b border-border-soft bg-paper/95 backdrop-blur-md">
+        <div className="container-app grid min-h-16 grid-cols-[1fr_auto] items-center gap-4 md:grid-cols-[1fr_auto_1fr]">
           <Link
-            className="rounded-sm font-serif text-2xl font-semibold tracking-tight"
+            className="inline-flex min-h-11 w-fit items-center rounded-sm font-serif text-2xl font-semibold tracking-tight"
             href="/"
           >
             Our Days
           </Link>
-          <p className="hidden text-sm text-muted sm:block">
+          <div className="hidden md:block md:justify-self-center">
+            <SiteNavigation variant="desktop" />
+          </div>
+          <p className="hidden max-w-56 text-right text-sm leading-5 text-muted lg:block lg:justify-self-end">
             Un lugar para lo que vivimos juntos
           </p>
-          <div className="hidden md:block">
-            <SiteNavigation />
-          </div>
         </div>
       </header>
-      <main id="main-content">{children}</main>
+      <main className="min-w-0" id="main-content" tabIndex={-1}>
+        {children}
+      </main>
       <div className="md:hidden">
-        <SiteNavigation />
+        <SiteNavigation variant="mobile" />
       </div>
     </div>
   );

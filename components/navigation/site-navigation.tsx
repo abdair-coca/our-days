@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { motion } from "motion/react";
 import { usePathname } from "next/navigation";
 
 import { classNames } from "@/lib/utils/class-names";
@@ -22,31 +23,52 @@ function isCurrentPath(href: string, pathname: string): boolean {
   return pathname.startsWith(href);
 }
 
-export function SiteNavigation() {
+type SiteNavigationProps = {
+  variant: "desktop" | "mobile";
+};
+
+export function SiteNavigation({ variant }: SiteNavigationProps) {
   const pathname = usePathname();
+  const isMobile = variant === "mobile";
 
   return (
     <nav
-      aria-label="Navegación principal"
-      className="fixed inset-x-3 bottom-3 z-40 rounded-2xl border border-ink/10 bg-card/95 p-1.5 shadow-soft backdrop-blur-md md:static md:border-0 md:bg-transparent md:p-0 md:shadow-none"
+      aria-label={isMobile ? "Navegación principal móvil" : "Navegación principal"}
+      className={isMobile ? "site-navigation-mobile" : "site-navigation-desktop"}
     >
-      <ul className="grid grid-cols-4 gap-1 md:flex md:items-center md:gap-1">
+      <ul
+        className={classNames(
+          "gap-1",
+          isMobile ? "grid grid-cols-4" : "flex items-center",
+        )}
+      >
         {primaryNavigation.map((item) => {
           const isCurrent = isCurrentPath(item.href, pathname);
+          const isCreate = item.href === "/memories/new";
 
           return (
-            <li key={item.href}>
+            <li className="min-w-0" key={item.href}>
               <Link
                 aria-current={isCurrent ? "page" : undefined}
                 className={classNames(
-                  "flex min-h-11 items-center justify-center rounded-xl px-2 py-2 text-center text-xs font-semibold transition sm:text-sm md:min-h-10 md:px-3",
+                  "relative flex min-h-11 min-w-11 items-center justify-center overflow-hidden rounded-button px-2 py-2 text-center text-xs font-semibold transition sm:text-sm",
+                  !isMobile && "px-3",
                   isCurrent
-                    ? "bg-blush text-white"
-                    : "text-muted hover:bg-blush/10 hover:text-ink",
+                    ? "text-white"
+                    : isCreate && isMobile
+                      ? "bg-accent-soft/55 text-accent-hover"
+                      : "text-muted hover:bg-accent-soft/35 hover:text-ink",
                 )}
                 href={item.href}
               >
-                {item.label}
+                {isCurrent ? (
+                  <motion.span
+                    className="absolute inset-0 rounded-button bg-blush"
+                    layoutId={`active-navigation-pill-${variant}`}
+                    transition={{ type: "spring", stiffness: 430, damping: 34, mass: 0.72 }}
+                  />
+                ) : null}
+                <span className="relative z-10 truncate">{item.label}</span>
               </Link>
             </li>
           );

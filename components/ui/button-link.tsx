@@ -1,33 +1,52 @@
-import Link from "next/link";
-import type { ComponentProps } from "react";
+"use client";
 
-import { classNames } from "@/lib/utils/class-names";
+import Link from "next/link";
+import type { ComponentProps, ReactNode } from "react";
+
+import {
+  getButtonClassName,
+  type ButtonVariant,
+} from "@/components/ui/button";
 
 type ButtonLinkProps = ComponentProps<typeof Link> & {
-  variant?: "primary" | "secondary" | "quiet";
+  disabled?: boolean;
+  loading?: boolean;
+  loadingLabel?: ReactNode;
+  variant?: ButtonVariant;
 };
 
-const variants = {
-  primary:
-    "bg-blush text-white shadow-sm hover:bg-blush-dark active:translate-y-px",
-  secondary:
-    "border border-ink/15 bg-white/75 text-ink hover:border-blush/40 hover:bg-white",
-  quiet: "text-blush-dark hover:bg-blush/10",
-} as const;
-
 export function ButtonLink({
+  children,
   className,
+  disabled = false,
+  loading = false,
+  loadingLabel = "Cargando…",
+  onClick,
+  tabIndex,
   variant = "primary",
   ...props
 }: ButtonLinkProps) {
+  const isDisabled = disabled || loading;
+
   return (
     <Link
-      className={classNames(
-        "inline-flex min-h-12 items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold transition focus-visible:outline-3",
-        variants[variant],
-        className,
-      )}
+      aria-busy={loading || undefined}
+      aria-disabled={isDisabled || undefined}
+      className={getButtonClassName({ className, disabled: isDisabled, variant })}
+      data-loading={loading || undefined}
+      onClick={(event) => {
+        if (isDisabled) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+
+        onClick?.(event);
+      }}
+      tabIndex={isDisabled ? -1 : tabIndex}
       {...props}
-    />
+    >
+      {loading ? loadingLabel : children}
+    </Link>
   );
 }

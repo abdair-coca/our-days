@@ -1,5 +1,9 @@
+"use client";
+
+import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 
+import { cardHover, imageHover } from "@/components/motion/variants";
 import { formatMemoryDate } from "@/lib/utils/format-memory-date";
 import type { Memory } from "@/types/memory";
 
@@ -10,19 +14,30 @@ type MemoryCardProps = {
 
 export function MemoryCard({ memory, priority = false }: MemoryCardProps) {
   const cover = memory.photos[0];
+  const shouldReduceMotion = useReducedMotion();
 
   return (
-    <article className="group h-full overflow-hidden rounded-3xl border border-ink/8 bg-card shadow-sm transition hover:-translate-y-1 hover:shadow-soft">
+    <motion.article
+      className="group h-full overflow-hidden rounded-3xl border border-ink/8 bg-card shadow-sm"
+      initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
+      transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+      variants={cardHover}
+      whileHover={shouldReduceMotion ? undefined : "hover"}
+      whileInView={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
+      whileTap={shouldReduceMotion ? undefined : "tap"}
+      viewport={{ margin: "0px 0px -8% 0px", once: true }}
+    >
       <Link
         className="block h-full rounded-3xl focus-visible:outline-offset-4"
         href={`/memories/${memory.id}`}
         prefetch={priority}
       >
-        <div
+        <motion.div
           aria-label={cover?.alt ?? "Recuerdo sin imagen"}
-          className="aspect-[4/3] w-full bg-[#eadfd7] transition duration-300 group-hover:scale-[1.015]"
+          className="aspect-[4/3] w-full bg-[#eadfd7]"
           role="img"
           style={{ backgroundImage: cover?.gradient }}
+          variants={imageHover}
         />
         <div className="p-5">
           <time
@@ -39,6 +54,6 @@ export function MemoryCard({ memory, priority = false }: MemoryCardProps) {
           </p>
         </div>
       </Link>
-    </article>
+    </motion.article>
   );
 }

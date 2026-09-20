@@ -9,7 +9,13 @@ export function FieldMessage({ id, message }: FieldMessageProps) {
   }
 
   return (
-    <p className="mt-2 text-sm font-medium text-red-700" id={id} role="alert">
+    <p
+      className="text-sm font-semibold text-[var(--error)]"
+      id={id}
+      role="alert"
+    >
+      <span aria-hidden="true">Error: </span>
+      <span className="sr-only">Error: </span>
       {message}
     </p>
   );

@@ -3,6 +3,8 @@
 import { motion, useReducedMotion } from "motion/react";
 import type { ReactNode } from "react";
 
+import { fadeUp } from "@/components/motion/variants";
+
 type RevealProps = {
   children: ReactNode;
   delay?: number;
@@ -14,14 +16,13 @@ export function Reveal({ children, delay = 0, className }: RevealProps) {
 
   return (
     <motion.div
-      animate={{ opacity: 1, y: 0 }}
+      animate="visible"
       className={className}
-      initial={shouldReduceMotion ? false : { opacity: 0, y: 14 }}
-      transition={
-        shouldReduceMotion
-          ? { duration: 0 }
-          : { duration: 0.36, delay, ease: [0.22, 1, 0.36, 1] }
-      }
+      initial={shouldReduceMotion ? false : "hidden"}
+      transition={shouldReduceMotion ? { duration: 0 } : { delay }}
+      variants={fadeUp}
+      viewport={{ margin: "0px 0px -10% 0px", once: true }}
+      whileInView="visible"
     >
       {children}
     </motion.div>
