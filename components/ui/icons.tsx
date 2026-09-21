@@ -119,6 +119,14 @@ export function MusicIcon(props: IconProps) {
   );
 }
 
+export function PlayIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="m9 6 10 6-10 6V6Z" />
+    </IconBase>
+  );
+}
+
 export function PlusIcon(props: IconProps) {
   return (
     <IconBase {...props}>
@@ -144,6 +152,14 @@ export function TrashIcon(props: IconProps) {
       <path d="M10 11v5M14 11v5" />
       <path d="m6 7 1 13h10l1-13" />
       <path d="m9 7 1-3h4l1 3" />
+    </IconBase>
+  );
+}
+
+export function XIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="m6 6 12 12M18 6 6 18" />
     </IconBase>
   );
 }

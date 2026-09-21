@@ -10,12 +10,14 @@ import {
   createMemoryAction,
   updateMemoryAction,
 } from "@/features/memories/mutations";
+import { resolveSongLink } from "@/features/music/song-source";
 import { processImage } from "@/features/photos/image-processing";
 import { photoGuidelines } from "@/features/photos/photo-guidelines";
 import { useDemoSubmit } from "@/hooks/use-demo-submit";
 import { memoryFormSchema, type MemoryFormValues } from "@/lib/validations/memory";
 import type { MemoryPhoto } from "@/types/memory";
 import { Button } from "@/components/ui/button";
+import { SongEmbed } from "@/components/music/song-embed";
 import { ErrorState, SuccessState } from "@/components/ui/status-panel";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,7 +26,10 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   ImagePlusIcon,
+  MusicIcon,
+  PlayIcon,
   TrashIcon,
+  XIcon,
 } from "@/components/ui/icons";
 
 type MemoryFormProps = {
@@ -86,6 +91,10 @@ function createInitialPhotos(photos: readonly MemoryPhoto[] = []): PhotoDraft[] 
   }));
 }
 
+function songProviderLabel(provider: "spotify" | "youtube") {
+  return provider === "spotify" ? "Spotify" : "YouTube Music";
+}
+
 function PhotoPreview({ photo }: { photo: PhotoDraft }) {
   return (
     <div
@@ -123,9 +132,15 @@ export function MemoryForm({
   const previewValues = useWatch({ control });
   const isSubmitting = demoSubmit.state === "submitting";
   const [isPreparingPhotos, setIsPreparingPhotos] = useState(false);
+  const [songPreviewUrl, setSongPreviewUrl] = useState("");
   const [photoProgress, setPhotoProgress] = useState({ completed: 0, total: 0 });
   const [photoError, setPhotoError] = useState("");
   const isBusy = isSubmitting || isPreparingPhotos;
+  const songUrlValue = previewValues.songUrl ?? "";
+  const isSongPreviewOpen = songPreviewUrl === songUrlValue && songUrlValue.length > 0;
+  const songSource = songUrlValue.trim()
+    ? resolveSongLink(songUrlValue)
+    : null;
 
   useEffect(() => {
     const urls = previewUrls.current;
@@ -442,6 +457,58 @@ export function MemoryForm({
             type="url"
             {...register("songUrl")}
           />
+
+          {songSource ? (
+            <div
+              aria-live="polite"
+              className="rounded-[var(--radius-card)] border border-border-soft bg-surface-soft p-4"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-surface text-olive">
+                    <MusicIcon size={18} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold">
+                      {songSource.ok
+                        ? `${songProviderLabel(songSource.provider)} listo`
+                        : "Enlace musical"}
+                    </p>
+                    <p className="mt-1 text-xs text-text-soft">
+                      {songSource.ok
+                        ? "Puedes comprobar cómo se escuchará antes de guardar."
+                        : "Pega un enlace de una canción de Spotify o YouTube Music."}
+                    </p>
+                  </div>
+                </div>
+
+                {songSource.ok ? (
+                  <button
+                    aria-label={isSongPreviewOpen ? "Cerrar vista previa" : "Probar canción"}
+                    className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--radius-button)] border border-border bg-surface px-3 text-accent transition-[color,background-color,border-color,transform] duration-[var(--motion-fast)] hover:-translate-y-px hover:border-accent hover:bg-accent-soft/50 focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-accent motion-reduce:transition-none motion-reduce:hover:transform-none"
+                    onClick={() => setSongPreviewUrl(isSongPreviewOpen ? "" : songUrlValue)}
+                    title={isSongPreviewOpen ? "Cerrar vista previa" : "Probar canción"}
+                    type="button"
+                  >
+                    {isSongPreviewOpen ? <XIcon /> : <PlayIcon />}
+                    <span className="sr-only">
+                      {isSongPreviewOpen ? "Cerrar vista previa" : "Probar canción"}
+                    </span>
+                  </button>
+                ) : null}
+              </div>
+
+              {songSource.ok && isSongPreviewOpen ? (
+                <div className="mt-4">
+                  <SongEmbed
+                    autoplay
+                    source={songSource}
+                    title={previewValues.songTitle || "esta canción"}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </fieldset>
 
         <div className="flex flex-col gap-3 border-t border-border-soft pt-6 sm:flex-row sm:items-center">
