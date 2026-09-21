@@ -58,6 +58,17 @@ export type MemoryPhotoRow = {
   width: number | null;
 };
 
+export type MemorySongRow = {
+  added_by: string;
+  artist: string;
+  created_at: string;
+  id: string;
+  memory_id: string;
+  title: string;
+  updated_at: string;
+  url: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -107,6 +118,15 @@ export type Database = {
           id?: string;
         };
         Update: Partial<Pick<MemoryPhotoRow, "alt_text" | "sort_order" | "storage_path" | "visual_value">>;
+      };
+      memory_songs: {
+        Row: MemorySongRow;
+        Insert: Omit<MemorySongRow, "id" | "created_at" | "updated_at"> & {
+          created_at?: string;
+          id?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Pick<MemorySongRow, "artist" | "title" | "url">>;
       };
     };
     Views: Record<string, never>;

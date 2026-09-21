@@ -11,6 +11,9 @@ export type MemoryPhoto = {
 };
 
 export type MemorySong = {
+  addedAt: string;
+  addedBy: string;
+  id: string;
   title: string;
   artist: string;
   url: string;
@@ -23,5 +26,5 @@ export type Memory = {
   memoryDate: string;
   createdBy: string;
   photos: readonly MemoryPhoto[];
-  song: MemorySong | null;
+  songs: readonly MemorySong[];
 };

@@ -22,7 +22,7 @@ La Fase 0 usa datos locales deterministas. Supabase queda preparado como seam de
 | Formularios | React Hook Form + Zod; validación compartida en `lib/validations`. |
 | Backend futuro | Server Actions por defecto; Route Handlers solo cuando hagan falta. |
 | Plataforma | Supabase para PostgreSQL, Auth y Storage; Vercel para Next.js. |
-| Música | Solo metadatos y enlaces externos en el MVP; sin integración directa con Spotify. |
+| Música | Colección de canciones por recuerdo con enlaces canónicos y embeds oficiales de Spotify/YouTube; sin SDKs ni OAuth. |
 | Imágenes | Storage privado; resize, compresión, thumbnails, lazy loading y signed URLs cuando corresponda. |
 
 ## Mapa de módulos
@@ -80,6 +80,8 @@ La interfaz `MemoryCatalog` de `features/memories/catalog.ts` es el seam de lect
 
 `localMemoryCatalog` es el adaptador actual para el prototipo. Más adelante, un adaptador Supabase podrá satisfacer la misma interfaz sin filtrar detalles de PostgreSQL hacia las páginas. La interfaz permanece pequeña; ordenamiento, lookup y reglas de datos viven dentro del módulo.
 
+`MemoryRepository` extiende ese seam para las mutaciones de recuerdos y canciones. Las operaciones `addSong`, `updateSong` y `removeSong` están aisladas del formulario: el servidor deriva `added_by` desde la sesión y normaliza la URL antes de persistirla. La pantalla de detalle consume `Memory.songs`, ordenadas por `created_at` ascendente, y mantiene como máximo un reproductor inline activo por recuerdo.
+
 ## Modelo de datos futuro
 
 ```text
@@ -99,12 +101,23 @@ memories
 
 memory_photos
   id, memory_id, storage_path, position, width, height, created_at
+
+memory_songs
+  id, memory_id, added_by, title, artist, url,
+  created_at, updated_at
 ```
+
+`memory_songs` es la fuente nueva para la colección musical. Las columnas
+`song_title`, `song_artist` y `song_url` de `memories` se conservan durante la
+transición para rollback y compatibilidad con datos antiguos; la migración
+inicial copia cada canción existente como el primer registro de su recuerdo.
+La URL almacenada en `memory_songs` es canónica y única por recuerdo.
 
 Relación principal:
 
 ```text
 space → space_members → memories → memory_photos
+                         └→ memory_songs
 ```
 
 ## Privacidad
@@ -115,7 +128,12 @@ El producto será privado. Cada usuario podrá acceder únicamente a recuerdos d
 user → space_members → space → memories
 ```
 
-La implementación real deberá combinar Supabase Auth, Row Level Security, Storage privado y signed URLs. La `SUPABASE_SERVICE_ROLE_KEY` será siempre server-only y nunca tendrá prefijo `NEXT_PUBLIC_`.
+La implementación real combina Supabase Auth, Row Level Security, Storage
+privado y signed URLs. Las políticas de `memory_songs` reutilizan la
+pertenencia al espacio del recuerdo: cualquier miembro puede leer, añadir,
+editar o eliminar canciones, pero no obtiene acceso a recuerdos de otro
+espacio. La `SUPABASE_SERVICE_ROLE_KEY` será siempre server-only y nunca tendrá
+prefijo `NEXT_PUBLIC_`.
 
 ## Flujo de imágenes
 

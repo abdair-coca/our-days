@@ -22,11 +22,16 @@ const seedMemories = [
         gradient: demoGradients.sunset,
       },
     ],
-    song: {
-      title: "Nuestra canción de regreso",
-      artist: "Lista compartida",
-      url: "https://music.youtube.com/",
-    },
+    songs: [
+      {
+        addedAt: "2026-08-16T10:00:00.000Z",
+        addedBy: "Alizon",
+        artist: "Lista compartida",
+        id: "sunset-train-song",
+        title: "Nuestra canción de regreso",
+        url: "https://music.youtube.com/",
+      },
+    ],
   },
   {
     id: "quiet-lake",
@@ -47,7 +52,7 @@ const seedMemories = [
         gradient: demoGradients.coast,
       },
     ],
-    song: null,
+    songs: [],
   },
   {
     id: "market-flowers",
@@ -63,11 +68,16 @@ const seedMemories = [
         gradient: demoGradients.flowers,
       },
     ],
-    song: {
-      title: "Domingo lento",
-      artist: "Lista compartida",
-      url: "https://open.spotify.com/",
-    },
+    songs: [
+      {
+        addedAt: "2025-11-22T10:00:00.000Z",
+        addedBy: "Alizon",
+        artist: "Lista compartida",
+        id: "market-flowers-song",
+        title: "Domingo lento",
+        url: "https://open.spotify.com/",
+      },
+    ],
   },
   {
     id: "first-stargazing",
@@ -83,7 +93,7 @@ const seedMemories = [
         gradient: demoGradients.night,
       },
     ],
-    song: null,
+    songs: [],
   },
 ] satisfies readonly Memory[];
 
@@ -109,7 +119,7 @@ const generatedMemories: readonly Memory[] = Array.from(
         alt: "Ilustración abstracta de un recuerdo compartido",
         gradient: gradientPalette[(index + photoIndex) % gradientPalette.length],
       })),
-      song: null,
+      songs: [],
     } satisfies Memory;
   },
 );
