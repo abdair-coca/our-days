@@ -5,4 +5,5 @@ export type {
   MemoryMutationInput,
   MemoryPhotoInput,
   MemoryRepository,
+  MemorySongMutationInput,
 } from "@/features/memories/repository";
