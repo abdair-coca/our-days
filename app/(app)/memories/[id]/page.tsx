@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { MemoryGallery } from "@/components/gallery/memory-gallery";
 import { DeleteMemoryButton } from "@/components/memory/delete-memory-button";
 import { Reveal } from "@/components/motion/reveal";
-import { SongCard } from "@/components/music/song-card";
+import { SongCollection } from "@/components/music/song-collection";
 import { ButtonLink } from "@/components/ui/button-link";
 import { ArrowLeftIcon, EditIcon } from "@/components/ui/icons";
 import { getMemoryCatalog } from "@/features/memories";
@@ -90,7 +90,7 @@ export default async function MemoryDetailPage({ params }: MemoryDetailPageProps
             {memory.description}
           </p>
         </section>
-        <SongCard song={memory.song} />
+        <SongCollection memoryId={memory.id} songs={memory.songs} />
       </div>
 
       {galleryPhotos.length > 0 ? (

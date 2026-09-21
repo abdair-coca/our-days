@@ -29,9 +29,9 @@ export default async function EditMemoryPage({ params }: EditMemoryPageProps) {
             title: memory.title,
             memoryDate: memory.memoryDate,
             description: memory.description,
-            songTitle: memory.song?.title ?? "",
-            songArtist: memory.song?.artist ?? "",
-            songUrl: memory.song?.url ?? "",
+            songTitle: memory.songs[0]?.title ?? "",
+            songArtist: memory.songs[0]?.artist ?? "",
+            songUrl: memory.songs[0]?.url ?? "",
           }}
           initialPhotos={memory.photos}
           memoryId={memory.id}

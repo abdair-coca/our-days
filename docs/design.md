@@ -545,7 +545,11 @@ Se permiten grids, masonry moderado y layouts editoriales.
 
 Debe sentirse parte del recuerdo, no como Spotify embebido.
 
-Contenido:
+Una sección musical puede contener varias tarjetas compactas en lista vertical.
+La colección sigue siendo secundaria respecto a la fotografía y la historia:
+no se comporta como una playlist genérica ni introduce una navegación propia.
+
+Contenido por tarjeta:
 
 ```text
 cover opcional
@@ -555,6 +559,21 @@ play/open action
 ```
 
 Compacta, limpia y secundaria respecto a la fotografía.
+
+Reglas de la colección:
+
+- La primera canción se conserva en el formulario de crear/editar; las demás se gestionan desde el detalle.
+- Cualquier miembro del espacio puede añadir, editar y eliminar canciones de un recuerdo compartido.
+- Las acciones de editar, eliminar y añadir son icon-only cuando el contexto sea claro; siempre llevan `aria-label`, `title` y target mínimo de 44 × 44px.
+- Solo una tarjeta puede reproducir un iframe oficial a la vez dentro del recuerdo; al abrir otra se cierra la anterior.
+- Añadir o editar abre un modal centrado en escritorio y un bottom sheet en móvil.
+- El reproductor se carga solo después de una acción explícita de reproducir o de preview.
+- Si el proveedor no puede reproducir el contenido, el enlace externo se mantiene como respaldo.
+
+La lista debe contemplar estado vacío, error de guardado, confirmación breve al
+eliminar y muchas canciones sin perder la jerarquía visual. La colección usa
+la misma transición de 220–320ms, `easeGentle` y soporte para
+`prefers-reduced-motion` que el resto del sistema.
 
 ---
 

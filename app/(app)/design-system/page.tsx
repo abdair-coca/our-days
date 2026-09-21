@@ -175,7 +175,16 @@ export default function DesignSystemPage() {
             <div aria-label="Paisaje costero, muestra visual temporal" className="aspect-[16/10] bg-cover bg-center" role="img" style={{ backgroundImage: demoGradients.coast }} />
             <div className="p-6"><Badge tone="accent">Recuerdo destacado</Badge><h3 className="mt-4 font-serif text-3xl leading-tight font-semibold">Kilómetros de costa</h3><p className="mt-3 leading-7 text-[var(--text-soft)]">Composición horizontal para desktop, con contenido breve y aire editorial.</p></div>
           </Card>
-          <SongCard song={{ artist: "Silvana Estrada", title: "Te guardo", url: "https://example.com" }} />
+          <SongCard
+            song={{
+              addedAt: "2026-08-17T10:00:00.000Z",
+              addedBy: "Our Days",
+              artist: "Silvana Estrada",
+              id: "design-system-song",
+              title: "Te guardo",
+              url: "https://example.com",
+            }}
+          />
         </div>
       </Section>
 
