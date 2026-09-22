@@ -60,6 +60,12 @@ function getSiteOrigin(): string {
   return "http://localhost:3000";
 }
 
+async function getEmailConfirmationRedirect(nextPath: string): Promise<string> {
+  const callbackUrl = new URL("/auth/confirm", await getSiteOrigin());
+  callbackUrl.searchParams.set("next", nextPath);
+  return callbackUrl.toString();
+}
+
 function connectionErrorState(): AuthActionState {
   return {
     ...initialAuthActionState,
@@ -110,6 +116,7 @@ export async function authAction(
         password,
         options: {
           data: displayName ? { display_name: displayName } : undefined,
+          emailRedirectTo: await getEmailConfirmationRedirect(nextPath),
         },
       }));
     } catch {
