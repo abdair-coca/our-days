@@ -1580,3 +1580,71 @@ El objetivo final es que la aplicación no parezca simplemente bien diseñada.
 Debe sentirse como:
 
 > **un lugar que vale la pena conservar.**
+
+---
+
+# 58. Personas del espacio
+
+La sección de personas vive dentro de Ajustes y mantiene una jerarquía
+secundaria respecto a los recuerdos. Debe permitir:
+
+- ver nombre, correo y rol de cada persona conectada;
+- buscar por nombre o correo con resultados compactos;
+- añadir con un icono de persona y signo más, con `aria-label` y tooltip;
+- quitar con el icono de papelera y confirmación breve;
+- distinguir a la persona propietaria sin ofrecer una acción de eliminación.
+
+La búsqueda debe tener un estado vacío claro, error comprensible, feedback de
+éxito y loading discreto. Las filas usan targets mínimos de 44 px, bordes
+suaves, iniciales como apoyo visual y no deben competir con la fotografía. Las
+transiciones se limitan a `opacity`, `transform` y color durante 160–280 ms,
+respetando `prefers-reduced-motion`.
+
+---
+
+# 59. Presentación narrativa
+
+La presentación se abre automáticamente al entrar al Home cuando hay una
+bienvenida o recuerdos nuevos pendientes, y también puede repetirse desde la
+entrada `Historias` de la navegación. En ambos casos se siente como una
+secuencia privada de Stories, no como un modal administrativo. Su orden visual es:
+
+```text
+entrada emotiva
+→ fotografía protagonista
+→ fecha
+→ título
+→ descripción breve
+→ autor y música secundaria
+```
+
+Reglas principales:
+
+- pantalla completa con superficie oscura cálida y fotografía a sangre;
+- barras de progreso superiores y controles mínimos;
+- avance automático cada 7 segundos;
+- toque derecho para avanzar, izquierdo para volver y mantener pulsado para pausar;
+- Escape, flechas y espacio disponibles en escritorio;
+- una sola canción continua mediante embed oficial;
+- la música comienza después de una interacción explícita del usuario;
+- el embed permanece montado al cambiar de story para no reiniciar la canción,
+  pero se representa visualmente como una cápsula musical discreta;
+- la cápsula muestra icono, título, artista o proveedor y un estado de reproducción;
+- el replay manual no modifica el estado de lecturas;
+- precargar solo la fotografía de la slide siguiente;
+- cerrar conserva los recuerdos ya mostrados como vistos.
+
+La bienvenida de una persona nueva muestra la historia completa. Las entradas
+posteriores muestran solo recuerdos nuevos para esa persona. `Historias` vuelve a
+mostrar el álbum completo cada vez que se abre, sin consumir pendientes. Si no
+existe una canción reproducible o el proveedor bloquea el autoplay, la narración
+continúa en silencio sin romper la presentación.
+
+Motion:
+
+```text
+entrada: opacity + translateY pequeño, 350–500ms
+cambio de story: opacity + scale mínimo, 280–380ms
+progreso: 7s lineal, pausado mientras se mantiene pulsado
+reduced motion: fade mínimo, sin parallax ni scale perceptible
+```

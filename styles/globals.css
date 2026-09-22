@@ -252,6 +252,20 @@ dialog[open] {
   font-family: var(--font-handwritten);
 }
 
+@keyframes story-progress-fill {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.story-progress-fill {
+  animation: story-progress-fill linear forwards;
+}
+
 @media (min-width: 40rem) {
   :root {
     --page-gutter: 1.5rem;
@@ -293,5 +307,10 @@ dialog[open] {
   dialog,
   dialog[open] {
     transform: none;
+  }
+
+  .story-progress-fill {
+    animation: none;
+    transform: scaleX(1);
   }
 }

@@ -8,6 +8,7 @@ import type { ComponentType } from "react";
 import {
   HomeIcon,
   ImagesIcon,
+  PlayIcon,
   PlusIcon,
   SettingsIcon,
   type IconProps,
@@ -21,6 +22,7 @@ const navigationIcons: Record<
 > = {
   "/": HomeIcon,
   "/memories": ImagesIcon,
+  "/presentations": PlayIcon,
   "/memories/new": PlusIcon,
   "/settings": SettingsIcon,
 };
@@ -57,7 +59,7 @@ export function SiteNavigation({ variant }: SiteNavigationProps) {
       <ul
         className={classNames(
           "gap-1",
-          isMobile ? "grid grid-cols-4" : "flex items-center",
+          isMobile ? "grid grid-cols-5" : "flex items-center",
         )}
       >
           {primaryNavigation.map((item) => {

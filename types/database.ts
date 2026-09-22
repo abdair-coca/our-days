@@ -16,6 +16,13 @@ export type SpaceMemberRow = {
   profile_id: string;
   role: "member" | "owner";
   space_id: string;
+  welcome_seen_at: string | null;
+};
+
+export type MemoryViewRow = {
+  memory_id: string;
+  profile_id: string;
+  seen_at: string;
 };
 
 export type SpaceInviteRow = {
@@ -87,8 +94,10 @@ export type Database = {
       };
       space_members: {
         Row: SpaceMemberRow;
-        Insert: SpaceMemberRow;
-        Update: Partial<Pick<SpaceMemberRow, "role">>;
+        Insert: Omit<SpaceMemberRow, "welcome_seen_at"> & {
+          welcome_seen_at?: string | null;
+        };
+        Update: Partial<Pick<SpaceMemberRow, "role" | "welcome_seen_at">>;
       };
       space_invites: {
         Row: SpaceInviteRow;
@@ -127,6 +136,11 @@ export type Database = {
           updated_at?: string;
         };
         Update: Partial<Pick<MemorySongRow, "artist" | "title" | "url">>;
+      };
+      memory_views: {
+        Row: MemoryViewRow;
+        Insert: Omit<MemoryViewRow, "seen_at"> & { seen_at?: string };
+        Update: Partial<Pick<MemoryViewRow, "seen_at">>;
       };
     };
     Views: Record<string, never>;

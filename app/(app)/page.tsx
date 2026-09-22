@@ -4,20 +4,25 @@ import Link from "next/link";
 /* eslint-disable @next/next/no-img-element */
 
 import { MemoryCard } from "@/components/memory/memory-card";
+import { MemoryPresentationOverlay } from "@/components/memory/memory-presentation";
 import { Reveal } from "@/components/motion/reveal";
 import { ButtonLink } from "@/components/ui/button-link";
 import { EmptyState } from "@/components/ui/status-panel";
 import { getMemoryCatalog } from "@/features/memories";
+import { getMemoryPresentation } from "@/features/memories/presentation";
 import { formatMemoryDate } from "@/lib/utils/format-memory-date";
 
 export default async function HomePage() {
   const catalog = await getMemoryCatalog();
   const memories = await catalog.list();
+  const presentation = await getMemoryPresentation(memories);
   const [featured, ...recent] = memories;
   const todayMemory = recent[0] ?? featured;
 
   return (
-    <div className="container-app py-8 sm:py-12">
+    <>
+      {presentation ? <MemoryPresentationOverlay presentation={presentation} /> : null}
+      <div className="container-app py-8 sm:py-12">
       <Reveal>
         <section
           aria-labelledby="home-title"
@@ -151,6 +156,7 @@ export default async function HomePage() {
           )}
         </aside>
       </Reveal>
-    </div>
+      </div>
+    </>
   );
 }

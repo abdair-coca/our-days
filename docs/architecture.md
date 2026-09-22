@@ -105,6 +105,9 @@ memory_photos
 memory_songs
   id, memory_id, added_by, title, artist, url,
   created_at, updated_at
+
+memory_views
+  memory_id, profile_id, seen_at
 ```
 
 `memory_songs` es la fuente nueva para la colección musical. Las columnas
@@ -118,6 +121,7 @@ Relación principal:
 ```text
 space → space_members → memories → memory_photos
                          └→ memory_songs
+                         └→ memory_views ← profile
 ```
 
 ## Privacidad
@@ -134,6 +138,28 @@ pertenencia al espacio del recuerdo: cualquier miembro puede leer, añadir,
 editar o eliminar canciones, pero no obtiene acceso a recuerdos de otro
 espacio. La `SUPABASE_SERVICE_ROLE_KEY` será siempre server-only y nunca tendrá
 prefijo `NEXT_PUBLIC_`.
+
+En `/settings`, las personas del espacio se cargan mediante funciones SQL
+security definer que vuelven a comprobar la pertenencia al espacio. La búsqueda
+devuelve únicamente nombre, correo y estado de pertenencia de cuentas
+confirmadas. Cualquier miembro puede buscar y añadir otra cuenta; solo el
+propietario puede quitar miembros y nunca puede quitarse al propietario. Las
+Server Actions vuelven a validar la sesión antes de cada operación.
+
+La presentación narrativa del Home usa `space_members.welcome_seen_at` para
+detectar una bienvenida pendiente y `memory_views` para mantener una lectura
+independiente por persona. Las membresías existentes y sus recuerdos se
+marcan como vistos durante la migración; las nuevas membresías empiezan con la
+bienvenida pendiente. Los recuerdos nuevos se consultan al entrar al Home, sin
+realtime, y se marcan vistos mediante funciones security definer que derivan
+`auth.uid()`.
+
+La ruta `/presentations`, visible como `Historias` en la navegación, construye
+una presentación de replay con todos los recuerdos ordenados cronológicamente.
+No usa ni altera `memory_views` o `welcome_seen_at`; sirve como acceso
+persistente para volver a ver la narrativa en cualquier momento. La canción de
+fondo se resuelve una sola vez y el embed permanece montado durante el cambio de
+story para conservar la reproducción.
 
 ## Flujo de imágenes
 
@@ -205,7 +231,10 @@ Cada fase debe dejar una versión usable y revisable. Definition of Done mínima
 
 ## Fuera del MVP
 
-IA, chat, ubicación, mapas, comentarios, gamificación, notificaciones complejas, realtime, reproducción completa de Spotify y modo offline completo quedan fuera hasta que el uso real justifique agregarlos.
+IA, chat, ubicación, mapas, comentarios, gamificación, notificaciones complejas,
+realtime, reproducción completa de Spotify y modo offline completo quedan fuera
+hasta que el uso real justifique agregarlos. La presentación usa los embeds
+oficiales existentes y no intenta extraer audio de los proveedores.
 
 ## Estado actual
 
