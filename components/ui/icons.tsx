@@ -127,11 +127,38 @@ export function PlayIcon(props: IconProps) {
   );
 }
 
+export function PauseIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M8 5v14M16 5v14" />
+    </IconBase>
+  );
+}
+
 export function PlusIcon(props: IconProps) {
   return (
     <IconBase {...props}>
       <path d="M12 5v14" />
       <path d="M5 12h14" />
+    </IconBase>
+  );
+}
+
+export function SearchIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <circle cx="10.75" cy="10.75" r="6.25" />
+      <path d="m16 16 4.5 4.5" />
+    </IconBase>
+  );
+}
+
+export function UserPlusIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M3 20c.8-3.3 2.8-5 6-5s5.2 1.7 6 5" />
+      <path d="M19 8v6M16 11h6" />
     </IconBase>
   );
 }

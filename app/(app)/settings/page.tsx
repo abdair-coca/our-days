@@ -1,9 +1,12 @@
 import { InviteCreateForm } from "@/components/auth/invite-actions";
+import { SpaceMembersPanel } from "@/components/auth/space-members-panel";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { getAuthContext } from "@/features/auth/auth-context";
 import { signOutAction } from "@/features/auth/actions";
+import { getSpaceMembers } from "@/features/auth/space-members";
 import { demoSession } from "@/features/auth/demo-session";
+import type { SpaceMember } from "@/features/auth/space-members";
 
 export default async function SettingsPage() {
   const authContext = await getAuthContext();
@@ -43,6 +46,15 @@ export default async function SettingsPage() {
     );
   }
 
+  let members: SpaceMember[] = [];
+  let membersError = "";
+
+  try {
+    members = await getSpaceMembers();
+  } catch {
+    membersError = "No pudimos cargar las personas del espacio. Inténtalo de nuevo.";
+  }
+
   return (
     <PageShell
       eyebrow="Preferencias"
@@ -73,6 +85,13 @@ export default async function SettingsPage() {
             <InviteCreateForm />
           </div>
         </section>
+
+        <SpaceMembersPanel
+          canManage={authContext.role === "owner"}
+          currentUserId={authContext.user.id}
+          initialError={membersError}
+          initialMembers={members}
+        />
 
         <section className="rounded-3xl border border-ink/8 bg-card p-6 shadow-sm lg:col-span-2">
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
