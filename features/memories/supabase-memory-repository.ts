@@ -164,20 +164,13 @@ export function createSupabaseMemoryRepository(
   userId: string,
 ): MemoryRepository {
   async function getSpaceId(): Promise<string | null> {
-    const { data, error } = await client
-      .from("space_members")
-      .select("space_id")
-      .eq("profile_id", userId)
-      .order("role", { ascending: true })
-      .order("joined_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
+    const { data, error } = await client.rpc("ensure_current_user_workspace");
 
     if (error) {
       throw error;
     }
 
-    return data?.space_id ?? null;
+    return data ?? null;
   }
 
   async function fetchRows(filters?: { id?: string; spaceId?: string }) {
