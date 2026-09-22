@@ -10,6 +10,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const nextPath = Array.isArray(rawNext) ? rawNext[0] : rawNext;
   const safeNextPath =
     nextPath?.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/";
+  const confirmationFailed = params.confirmation === "failed";
 
   return (
     <section className="rounded-[2rem] border border-ink/8 bg-card p-6 shadow-soft sm:p-8">
@@ -20,6 +21,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <p className="mt-3 leading-7 text-muted">
         Entra para ver el espacio compartido y guardar nuevos recuerdos.
       </p>
+      {confirmationFailed ? (
+        <p className="mt-5 text-sm font-semibold text-error" role="alert">
+          No pudimos confirmar este correo. Solicita un correo nuevo e inténtalo otra vez.
+        </p>
+      ) : null}
       <LoginForm nextPath={safeNextPath} />
       <p className="mt-5 text-center text-sm text-muted">
         ¿Tienes una invitación?{" "}

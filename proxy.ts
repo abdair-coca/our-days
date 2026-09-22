@@ -37,9 +37,14 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
-  const {
-    data: { user },
-  } = await client.auth.getUser();
+  let user = null;
+
+  try {
+    const result = await client.auth.getUser();
+    user = result.data.user;
+  } catch {
+    // Protected routes still fail closed below; public routes such as /login remain usable.
+  }
   const { pathname } = request.nextUrl;
 
   if (isProtectedPath(pathname) && !user) {
@@ -65,6 +70,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|auth/confirm|manifest.webmanifest|apple-icon|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

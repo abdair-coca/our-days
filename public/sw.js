@@ -1,4 +1,12 @@
-const CACHE_NAME = "our-days-static-v1";
+const CACHE_NAME = "our-days-static-v2";
+
+function unavailableResponse() {
+  return new Response(null, {
+    status: 503,
+    statusText: "Service Unavailable",
+    headers: { "Cache-Control": "no-store" },
+  });
+}
 
 function isCacheableAsset(request) {
   if (request.method !== "GET") {
@@ -55,11 +63,14 @@ self.addEventListener("fetch", (event) => {
         }
 
         const responseToCache = response.clone();
-        void caches.open(CACHE_NAME).then((cache) =>
-          cache.put(event.request, responseToCache),
-        );
+        void caches
+          .open(CACHE_NAME)
+          .then((cache) => cache.put(event.request, responseToCache))
+          .catch(() => {
+            // Cache failure must not break the network response.
+          });
         return response;
-      });
+      }).catch(() => unavailableResponse());
     }),
   );
 });

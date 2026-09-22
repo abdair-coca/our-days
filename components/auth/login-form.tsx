@@ -78,6 +78,18 @@ export function LoginForm({ nextPath }: LoginFormProps) {
           Crear cuenta
         </Button>
       </div>
+      <Button
+        className="w-full"
+        disabled={isPending}
+        formNoValidate
+        loading={isPending}
+        name="intent"
+        type="submit"
+        value="resend"
+        variant="quiet"
+      >
+        Reenviar correo de confirmación
+      </Button>
     </form>
   );
 }

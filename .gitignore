@@ -25,3 +25,6 @@ yarn-error.log*
 
 # Supabase CLI local link metadata
 /supabase/.temp
+
+.vercel
+.env*

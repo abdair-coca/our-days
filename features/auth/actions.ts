@@ -35,6 +35,14 @@ function authErrorMessage(message: string): string {
     return "Esta cuenta ya existe. Intenta entrar.";
   }
 
+  if (normalized.includes("rate limit")) {
+    return "Se alcanzó el límite temporal de correos. Espera unos minutos e inténtalo de nuevo.";
+  }
+
+  if (normalized.includes("invalid email")) {
+    return "Escribe un correo válido.";
+  }
+
   return "No pudimos completar el acceso. Inténtalo de nuevo.";
 }
 
@@ -50,11 +58,19 @@ function inviteErrorMessage(message: string): string {
   return "No pudimos aceptar la invitación. Inténtalo de nuevo.";
 }
 
-function getSiteOrigin(): string {
+async function getSiteOrigin(): Promise<string> {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
   if (siteUrl) {
     return siteUrl.replace(/\/$/, "");
+  }
+
+  const headerStore = await headers();
+  const forwardedHost = headerStore.get("x-forwarded-host") ?? headerStore.get("host");
+  const forwardedProtocol = headerStore.get("x-forwarded-proto") ?? "http";
+
+  if (forwardedHost && /^(https?)$/.test(forwardedProtocol)) {
+    return `${forwardedProtocol}://${forwardedHost}`;
   }
 
   return "http://localhost:3000";
@@ -92,7 +108,40 @@ export async function authAction(
   const intent = textValue(formData, "intent");
   const nextPath = safeNextPath(textValue(formData, "next"));
 
-  if (!email || !password) {
+  if (!email) {
+    return {
+      ...initialAuthActionState,
+      error: "Escribe tu correo.",
+    };
+  }
+
+  if (intent === "resend") {
+    let error;
+
+    try {
+      ({ error } = await client.auth.resend({
+        type: "signup",
+        email,
+        options: {
+          emailRedirectTo: await getEmailConfirmationRedirect(nextPath),
+        },
+      }));
+    } catch {
+      return connectionErrorState();
+    }
+
+    if (error) {
+      return { ...initialAuthActionState, error: authErrorMessage(error.message) };
+    }
+
+    return {
+      ...initialAuthActionState,
+      message: "Si la cuenta necesita confirmación, enviamos un correo nuevo.",
+      ok: true,
+    };
+  }
+
+  if (!password) {
     return {
       ...initialAuthActionState,
       error: "Escribe tu correo y contraseña.",
@@ -218,12 +267,7 @@ export async function createInviteAction(
     };
   }
 
-  const headerStore = await headers();
-  const forwardedHost = headerStore.get("x-forwarded-host") ?? headerStore.get("host");
-  const forwardedProtocol = headerStore.get("x-forwarded-proto") ?? "http";
-  const origin = forwardedHost
-    ? `${forwardedProtocol}://${forwardedHost}`
-    : getSiteOrigin();
+  const origin = await getSiteOrigin();
 
   return {
     error: "",

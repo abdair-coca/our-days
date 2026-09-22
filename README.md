@@ -85,10 +85,21 @@ Copy `.env.example` to `.env.local` and fill in the public Supabase URL and key 
 | `NEXT_PUBLIC_SUPABASE_URL` | Browser-safe project URL | Supabase project endpoint |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser-safe legacy anon key | Public fallback key |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Browser-safe modern publishable key | Optional; preferred over anon key when set |
-| `NEXT_PUBLIC_SITE_URL` | Public origin | Fallback origin for generated invite links |
+| `NEXT_PUBLIC_SITE_URL` | Public origin | Origin for invite links and email confirmation callbacks |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server only | Reserved for future administration; never expose to client code |
 
 The service-role key is deliberately absent from browser helpers and must never use a `NEXT_PUBLIC_` prefix.
+
+## Production authentication checklist
+
+Before testing login on Vercel:
+
+1. Disable Vercel Deployment Protection for the public production deployment, or test through a public custom domain. Vercel SSO otherwise intercepts `/login`, `/manifest.webmanifest`, and `/sw.js` before they reach Next.js.
+2. Add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) and `NEXT_PUBLIC_SITE_URL` to the Vercel Production environment, then redeploy. Set `NEXT_PUBLIC_SITE_URL` to the public HTTPS origin.
+3. In Supabase Auth URL Configuration, set Site URL to the same public HTTPS origin.
+4. In Supabase Auth URL Configuration, allow the exact callback `https://<public-origin>/login`.
+5. In Supabase Auth Email Templates → Confirm signup, use `{{ .ConfirmationURL }}` only if your flow handles the returned client session. This app uses SSR/PKCE, so use the server callback instead: `<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next={{ .RedirectTo }}">Confirmar correo</a>`.
+6. In Supabase Auth email settings, enable the Email provider and configure SMTP for reliable delivery. Check spam and the provider's delivery logs.
 
 ## Accessibility and responsive behavior
 
