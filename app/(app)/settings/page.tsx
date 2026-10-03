@@ -3,7 +3,7 @@ import { SpaceMembersPanel } from "@/components/auth/space-members-panel";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
 import { getAuthContext } from "@/features/auth/auth-context";
-import { signOutAction } from "@/features/auth/actions";
+import { MusicSignOutForm } from "@/components/music/music-sign-out-form";
 import { getSpaceMembers } from "@/features/auth/space-members";
 import { demoSession } from "@/features/auth/demo-session";
 import type { SpaceMember } from "@/features/auth/space-members";
@@ -20,7 +20,9 @@ export default async function SettingsPage() {
       >
         <div className="grid gap-5 lg:grid-cols-2">
           <section className="rounded-3xl border border-ink/8 bg-card p-6 shadow-sm">
-            <h2 className="font-serif text-2xl font-semibold">Espacio de demostración</h2>
+            <h2 className="font-serif text-2xl font-semibold">
+              Espacio de demostración
+            </h2>
             <dl className="mt-5 space-y-4 text-sm">
               <div className="flex items-center justify-between gap-4 border-b border-ink/8 pb-4">
                 <dt className="text-muted">Nombre</dt>
@@ -28,7 +30,9 @@ export default async function SettingsPage() {
               </div>
               <div className="flex items-center justify-between gap-4">
                 <dt className="text-muted">Personas</dt>
-                <dd className="text-right font-semibold">{demoSession.people.join(" y ")}</dd>
+                <dd className="text-right font-semibold">
+                  {demoSession.people.join(" y ")}
+                </dd>
               </div>
             </dl>
           </section>
@@ -52,7 +56,8 @@ export default async function SettingsPage() {
   try {
     members = await getSpaceMembers();
   } catch {
-    membersError = "No pudimos cargar las personas del espacio. Inténtalo de nuevo.";
+    membersError =
+      "No pudimos cargar las personas del espacio. Inténtalo de nuevo.";
   }
 
   return (
@@ -65,21 +70,24 @@ export default async function SettingsPage() {
         <section className="rounded-3xl border border-ink/8 bg-card p-6 shadow-sm">
           <h2 className="font-serif text-2xl font-semibold">Espacio</h2>
           <dl className="mt-5 space-y-4 text-sm">
-              <div className="flex items-center justify-between gap-4 border-b border-ink/8 pb-4">
-                <dt className="text-muted">Nombre</dt>
-                <dd className="font-semibold">{authContext.space.name}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <dt className="text-muted">Tu cuenta</dt>
-                <dd className="text-right font-semibold">{authContext.profileName}</dd>
-              </div>
-            </dl>
+            <div className="flex items-center justify-between gap-4 border-b border-ink/8 pb-4">
+              <dt className="text-muted">Nombre</dt>
+              <dd className="font-semibold">{authContext.space.name}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <dt className="text-muted">Tu cuenta</dt>
+              <dd className="text-right font-semibold">
+                {authContext.profileName}
+              </dd>
+            </div>
+          </dl>
         </section>
 
         <section className="rounded-3xl border border-ink/8 bg-card p-6 shadow-sm">
           <h2 className="font-serif text-2xl font-semibold">Invitar</h2>
           <p className="mt-3 text-sm leading-6 text-muted">
-            Crea un enlace privado para que la otra persona se una a este espacio.
+            Crea un enlace privado para que la otra persona se una a este
+            espacio.
           </p>
           <div className="mt-5">
             <InviteCreateForm />
@@ -98,14 +106,15 @@ export default async function SettingsPage() {
             <div>
               <h2 className="font-serif text-2xl font-semibold">Sesión</h2>
               <p className="mt-2 text-sm leading-6 text-muted">
-                Cuenta activa: {authContext.user.email ?? authContext.profileName}
+                Cuenta activa:{" "}
+                {authContext.user.email ?? authContext.profileName}
               </p>
             </div>
-            <form action={signOutAction}>
+            <MusicSignOutForm>
               <Button type="submit" variant="secondary">
                 Cerrar sesión
               </Button>
-            </form>
+            </MusicSignOutForm>
           </div>
         </section>
       </div>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { SiteNavigation } from "@/components/navigation/site-navigation";
+import { MusicLibraryButton } from "@/components/music/music-player";
 
 type AppFrameProps = {
   children: ReactNode;
@@ -27,9 +28,9 @@ export function AppFrame({ children }: AppFrameProps) {
           <div className="hidden md:block md:justify-self-center">
             <SiteNavigation variant="desktop" />
           </div>
-          <p className="hidden max-w-56 text-right text-sm leading-5 text-muted lg:block lg:justify-self-end">
-            Un lugar para lo que vivimos juntos
-          </p>
+          <div className="justify-self-end">
+            <MusicLibraryButton />
+          </div>
         </div>
       </header>
       <main className="min-w-0" id="main-content" tabIndex={-1}>

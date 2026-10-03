@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
+import { MusicPlayerProvider } from "@/components/music/music-player";
 import "@/styles/globals.css";
 
 export const metadata: Metadata = {
@@ -28,7 +29,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es">
       <body>
-        {children}
+        <MusicPlayerProvider>{children}</MusicPlayerProvider>
         <ServiceWorkerRegistration />
       </body>
     </html>

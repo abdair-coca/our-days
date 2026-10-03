@@ -7,6 +7,7 @@ function isProtectedPath(pathname: string): boolean {
   return (
     pathname === "/" ||
     pathname === "/settings" ||
+    pathname === "/presentations" ||
     pathname === "/design-system" ||
     pathname === "/memories" ||
     pathname.startsWith("/memories/")
@@ -51,10 +52,7 @@ export async function proxy(request: NextRequest) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.search = "";
-    loginUrl.searchParams.set(
-      "next",
-      `${pathname}${request.nextUrl.search}`,
-    );
+    loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(loginUrl);
   }
 

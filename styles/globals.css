@@ -1,5 +1,230 @@
 @import "tailwindcss";
 
+/* The host stays in the root layout; only its position changes for dialogs. */
+.global-music-player {
+  position: fixed;
+  z-index: 45;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: calc(88px + env(safe-area-inset-bottom));
+  width: min(336px, calc(100% - 24px));
+  max-height: calc(
+    100dvh - 110px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+  );
+  overflow-y: auto;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-overlay);
+  padding: 10px;
+}
+.global-music-player[hidden],
+.music-media-host[hidden] {
+  display: none;
+}
+.music-player-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.music-player-symbol {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-accent-soft);
+  color: var(--color-olive);
+}
+.music-track-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 2px 8px;
+  font-size: 11px;
+}
+.music-track-meta a {
+  max-width: 52%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-decoration: underline;
+}
+.music-media-host {
+  height: 200px;
+  min-width: 200px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--color-surface-soft);
+}
+.music-media-host iframe {
+  display: block;
+  width: 100%;
+  height: 200px;
+  border: 0;
+}
+.music-media-spotify,
+.music-media-spotify iframe {
+  height: 152px;
+}
+.music-player-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+  margin-top: 5px;
+}
+.music-player-controls button {
+  min-height: 40px;
+  padding: 8px;
+}
+.music-seek {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  margin-top: 6px;
+}
+.music-seek input {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--color-accent);
+}
+.music-seek span {
+  flex-shrink: 0;
+}
+.music-message {
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 6px 0;
+}
+.music-time {
+  margin-top: 4px;
+  font-size: 11px;
+  text-align: right;
+}
+.music-provider-link {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 5px;
+  font-size: 11px;
+  text-decoration: underline;
+}
+.music-library {
+  border-top: 1px solid var(--color-border-soft);
+  margin-top: 10px;
+  padding-top: 10px;
+}
+.music-library ol {
+  max-height: 220px;
+  overflow-y: auto;
+  margin-top: 8px;
+}
+.music-library li button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  width: 100%;
+  padding: 10px;
+  min-height: 48px;
+  border-radius: 10px;
+}
+.music-library li button:hover,
+.music-library li button[aria-current] {
+  background: var(--color-accent-soft);
+}
+.music-library li span {
+  min-width: 0;
+}
+.music-library strong,
+.music-library small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.music-library strong {
+  font-size: 13px;
+}
+.music-library small {
+  font-size: 11px;
+}
+.music-owner-preview,
+.music-owner-story {
+  z-index: 60;
+}
+.music-owner-story,
+body:has(.song-dialog-with-preview) .music-owner-preview {
+  bottom: calc(12px + env(safe-area-inset-bottom));
+}
+.song-dialog-panel {
+  max-height: calc(100dvh - 24px);
+}
+.song-dialog-with-preview {
+  margin-bottom: calc(420px + env(safe-area-inset-bottom));
+  max-height: calc(100dvh - 440px - env(safe-area-inset-bottom));
+}
+.story-content-with-music {
+  top: 90px;
+  transform: none;
+  translate: none;
+  max-height: calc(100dvh - 450px);
+  overflow-y: auto;
+}
+.story-content-with-music article > div > div:first-child {
+  min-height: 110px;
+  max-height: 20vh;
+}
+.story-content-with-music article > div > div:last-child {
+  padding: 12px 16px;
+}
+.story-content-with-music h1 {
+  font-size: 25px;
+}
+.story-content-with-music p {
+  margin-top: 6px;
+}
+.story-photo-zoom {
+  animation: story-photo-zoom 7s linear forwards;
+}
+@keyframes story-photo-zoom {
+  from {
+    transform: scale(1.045);
+  }
+  to {
+    transform: scale(1.02);
+  }
+}
+@media (min-width: 768px) {
+  .global-music-player {
+    right: max(24px, env(safe-area-inset-right));
+    bottom: calc(24px + env(safe-area-inset-bottom));
+    max-height: calc(100dvh - 48px);
+  }
+  .song-dialog-with-preview {
+    margin-bottom: 0;
+    margin-right: 360px;
+    max-width: min(36rem, calc(100vw - 400px));
+    max-height: min(88vh, 42rem);
+  }
+  .story-content-with-music {
+    top: 50%;
+    transform: translateY(-50%);
+    margin-right: 370px;
+    max-height: calc(100dvh - 160px);
+  }
+  .story-content-with-music article > div > div:first-child {
+    min-height: 200px;
+    max-height: 45vh;
+  }
+  .story-content-with-music h1 {
+    font-size: 38px;
+  }
+}
+
 :root {
   color-scheme: light;
 
@@ -24,7 +249,8 @@
   --error: #a8463d;
 
   /* Type — local-first stacks; no render-blocking font request. */
-  --font-editorial: "Fraunces", "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --font-editorial:
+    "Fraunces", "Cormorant Garamond", Georgia, "Times New Roman", serif;
   --font-ui: "Inter", "Manrope", "Segoe UI", Arial, sans-serif;
   --font-handwritten: "Caveat", "Segoe Print", "Bradley Hand", cursive;
 
