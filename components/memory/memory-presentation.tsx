@@ -31,7 +31,7 @@ export function MemoryPresentationOverlay({
   presentation,
 }: MemoryPresentationProps) {
   const shouldReduceMotion = useReducedMotion();
-  const { controller } = useMusicPlayer();
+  const { controller, state: musicState } = useMusicPlayer();
   const dialogPanel = useRef<HTMLDivElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
   const storyClock = useRef({ index: 0, remaining: STORY_DURATION_MS });
@@ -68,7 +68,7 @@ export function MemoryPresentationOverlay({
         }
       : null;
   useTemporaryMusic(backgroundTrack, audioStarted && isOpen, "story");
-  const timerPaused = isPaused || isHolding;
+  const timerPaused = isPaused || isHolding || musicState.expanded;
   const togglePause = useCallback(() => {
     setIsPaused((paused) => !paused);
     if (isPaused) controller.play();
@@ -179,7 +179,7 @@ export function MemoryPresentationOverlay({
           ...document.querySelectorAll<HTMLElement>(
             ".music-owner-story:not([hidden]) button:not([disabled]), .music-owner-story:not([hidden]) a[href], .music-owner-story:not([hidden]) iframe, .music-owner-story:not([hidden]) input",
           ),
-        ];
+        ].filter((element) => element.getClientRects().length > 0);
         const first = focusable[0];
         const last = focusable.at(-1);
         if (

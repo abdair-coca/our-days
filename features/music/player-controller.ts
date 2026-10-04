@@ -13,6 +13,7 @@ export type PlayerState = {
   wantsPlay: boolean;
   owner: "story" | "preview" | null;
   expanded: boolean;
+  videoVisible: boolean;
   message: string;
 };
 export type PlaybackEvent = {
@@ -32,6 +33,7 @@ type Snapshot = {
   position: number;
   wasPlaying: boolean;
   owner: PlayerState["owner"];
+  videoVisible: boolean;
 };
 type TemporarySession = { token: number; closed: boolean; snapshot: Snapshot };
 
@@ -46,6 +48,7 @@ const initialState: PlayerState = {
   wantsPlay: false,
   owner: null,
   expanded: false,
+  videoVisible: false,
   message: "",
 };
 
@@ -86,6 +89,7 @@ export class MusicPlayerController {
       if (previous && (!next || !sameMedia(previous, next))) {
         session.snapshot.wasPlaying = false;
         session.snapshot.position = 0;
+        session.snapshot.videoVisible = false;
       }
     }
     const current = this.state.track;
@@ -102,7 +106,7 @@ export class MusicPlayerController {
       else this.update({ track: next });
     }
   };
-  private activate(track: MusicTrack | null, play: boolean, position = 0) {
+  private activate(track: MusicTrack | null, play: boolean, position = 0, videoVisible = false) {
     this.adapter?.destroy();
     this.adapter = null;
     this.update({
@@ -111,6 +115,7 @@ export class MusicPlayerController {
       duration: 0,
       status: track ? "loading" : "idle",
       wantsPlay: play,
+      videoVisible: Boolean(track?.source.provider === "youtube" && videoVisible),
       request: this.state.request + 1,
       message: "",
     });
@@ -120,11 +125,31 @@ export class MusicPlayerController {
     const track = this.state.tracks.find((item) => item.key === key);
     if (track) {
       this.activate(track, true);
-      this.update({ expanded: false });
     }
   };
   toggleLibrary = () => this.update({ expanded: !this.state.expanded });
-  stop = () => this.activate(null, false);
+  openLibrary = () => this.update({ expanded: true });
+  closeLibrary = () => this.update({ expanded: false });
+  stop = () => {
+    this.activate(null, false);
+    this.closeLibrary();
+  };
+  showVideo = () => {
+    if (this.state.track?.source.provider !== "youtube" || this.state.videoVisible) return;
+    this.update({ videoVisible: true, wantsPlay: true, status: "loading", message: "" });
+  };
+  hideVideo = () => {
+    if (!this.state.videoVisible) return;
+    this.adapter?.destroy();
+    this.adapter = null;
+    this.update({
+      videoVisible: false,
+      wantsPlay: false,
+      status: "paused",
+      request: this.state.request + 1,
+      message: "",
+    });
+  };
   play = () => {
     if (this.state.track) {
       this.update({ wantsPlay: true, message: "" });
@@ -176,7 +201,7 @@ export class MusicPlayerController {
   };
   retry = () => {
     if (this.state.track)
-      this.activate(this.state.track, true, this.state.position);
+      this.activate(this.state.track, true, this.state.position, this.state.videoVisible);
   };
   beginTemporary = (owner: "story" | "preview", track: MusicTrack | null) => {
     if (!this.state.identity) return 0;
@@ -189,6 +214,7 @@ export class MusicPlayerController {
         position: this.state.position,
         wasPlaying: this.state.status === "playing",
         owner: this.state.owner,
+        videoVisible: this.state.videoVisible,
       },
     });
     this.pause();
@@ -224,7 +250,7 @@ export class MusicPlayerController {
       restore = this.sessions.pop()?.snapshot;
     if (restore) {
       this.update({ owner: restore.owner });
-      this.activate(restore.track, restore.wasPlaying, restore.position);
+      this.activate(restore.track, restore.wasPlaying, restore.position, restore.videoVisible);
     }
   };
 }

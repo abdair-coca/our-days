@@ -79,7 +79,7 @@ export function SongDialog({
           ...document.querySelectorAll<HTMLElement>(
             ".music-owner-preview:not([hidden]) button:not([disabled]), .music-owner-preview:not([hidden]) a[href], .music-owner-preview:not([hidden]) iframe, .music-owner-preview:not([hidden]) input",
           ),
-        ]);
+        ]).filter((element) => element.getClientRects().length > 0);
         const first = focusable[0];
         const last = focusable.at(-1);
 
