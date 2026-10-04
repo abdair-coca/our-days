@@ -14,6 +14,7 @@ import { MusicIcon, PlusIcon } from "@/components/ui/icons";
 
 import { SongCard } from "./song-card";
 import { SongDialog } from "./song-dialog";
+import { useMusicPlayer } from "./music-player";
 
 type SongCollectionProps = {
   memoryId: string;
@@ -21,14 +22,16 @@ type SongCollectionProps = {
 };
 
 type DialogState =
-  | { mode: "add"; song?: undefined }
-  | { mode: "edit"; song: MemorySong }
-  | null;
+  { mode: "add"; song?: undefined } | { mode: "edit"; song: MemorySong } | null;
 
 export function SongCollection({ memoryId, songs }: SongCollectionProps) {
   const router = useRouter();
   const shouldReduceMotion = useReducedMotion() ?? false;
-  const [activeSongId, setActiveSongId] = useState<string | null>(null);
+  const {
+    controller,
+    state: musicState,
+    refresh: refreshMusic,
+  } = useMusicPlayer();
   const [dialog, setDialog] = useState<DialogState>(null);
   const [pendingSongId, setPendingSongId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -37,12 +40,17 @@ export function SongCollection({ memoryId, songs }: SongCollectionProps) {
     setDialog(null);
     setMessage(result.message);
     if (result.mode === "supabase") {
+      void refreshMusic();
       router.refresh();
     }
   }
 
   async function handleDelete(song: MemorySong) {
-    if (!window.confirm(`¿Eliminar “${song.title}”? Esta acción no se puede deshacer.`)) {
+    if (
+      !window.confirm(
+        `¿Eliminar “${song.title}”? Esta acción no se puede deshacer.`,
+      )
+    ) {
       return;
     }
 
@@ -52,9 +60,17 @@ export function SongCollection({ memoryId, songs }: SongCollectionProps) {
     setPendingSongId(null);
 
     if (result.ok) {
-      setActiveSongId((current) => (current === song.id ? null : current));
       setMessage(result.message);
       if (result.mode === "supabase") {
+        const current = controller.getSnapshot();
+        if (current.identity)
+          controller.setLibrary(
+            current.identity,
+            current.tracks.filter(
+              (track) => track.key !== `${memoryId}:${song.id}`,
+            ),
+          );
+        await refreshMusic();
         router.refresh();
       }
       return;
@@ -73,8 +89,13 @@ export function SongCollection({ memoryId, songs }: SongCollectionProps) {
               Banda sonora
             </span>
           </p>
-          <h2 className="mt-2 font-serif text-2xl font-semibold" id="songs-title">
-            {songs.length > 1 ? "Canciones del recuerdo" : "Canción del recuerdo"}
+          <h2
+            className="mt-2 font-serif text-2xl font-semibold"
+            id="songs-title"
+          >
+            {songs.length > 1
+              ? "Canciones del recuerdo"
+              : "Canción del recuerdo"}
           </h2>
         </div>
         <Button
@@ -102,7 +123,9 @@ export function SongCollection({ memoryId, songs }: SongCollectionProps) {
                     ? { opacity: 0 }
                     : { opacity: 0, scale: 0.98, y: -4 }
                 }
-                initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+                initial={
+                  shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }
+                }
                 key={song.id}
                 transition={{
                   duration: shouldReduceMotion ? 0.1 : 0.24,
@@ -110,14 +133,19 @@ export function SongCollection({ memoryId, songs }: SongCollectionProps) {
                 }}
               >
                 <SongCard
-                  isActive={activeSongId === song.id}
-                  onDelete={pendingSongId ? undefined : () => handleDelete(song)}
-                  onEdit={pendingSongId ? undefined : () => {
-                    setMessage("");
-                    setActiveSongId(null);
-                    setDialog({ mode: "edit", song });
-                  }}
-                  onPlay={() => setActiveSongId((current) => (current === song.id ? null : song.id))}
+                  isActive={musicState.track?.key === `${memoryId}:${song.id}`}
+                  onDelete={
+                    pendingSongId ? undefined : () => handleDelete(song)
+                  }
+                  onEdit={
+                    pendingSongId
+                      ? undefined
+                      : () => {
+                          setMessage("");
+                          setDialog({ mode: "edit", song });
+                        }
+                  }
+                  onPlay={() => controller.select(`${memoryId}:${song.id}`)}
                   song={song}
                 />
               </motion.div>

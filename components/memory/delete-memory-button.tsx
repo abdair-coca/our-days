@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { deleteMemoryAction } from "@/features/memories/mutations";
 import { Button } from "@/components/ui/button";
 import { TrashIcon } from "@/components/ui/icons";
+import { useMusicPlayer } from "@/components/music/music-player";
 
 type DeleteMemoryButtonProps = {
   memoryId: string;
@@ -13,11 +14,16 @@ type DeleteMemoryButtonProps = {
 
 export function DeleteMemoryButton({ memoryId }: DeleteMemoryButtonProps) {
   const router = useRouter();
+  const { controller, refresh: refreshMusic } = useMusicPlayer();
   const [message, setMessage] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
 
   async function handleDelete() {
-    if (!window.confirm("¿Eliminar este recuerdo? Esta acción no se puede deshacer.")) {
+    if (
+      !window.confirm(
+        "¿Eliminar este recuerdo? Esta acción no se puede deshacer.",
+      )
+    ) {
       return;
     }
 
@@ -26,6 +32,13 @@ export function DeleteMemoryButton({ memoryId }: DeleteMemoryButtonProps) {
     const result = await deleteMemoryAction(memoryId);
 
     if (result.ok && result.mode === "supabase") {
+      const current = controller.getSnapshot();
+      if (current.identity)
+        controller.setLibrary(
+          current.identity,
+          current.tracks.filter((track) => track.memoryId !== memoryId),
+        );
+      await refreshMusic();
       router.push("/memories");
       router.refresh();
       return;
@@ -49,7 +62,10 @@ export function DeleteMemoryButton({ memoryId }: DeleteMemoryButtonProps) {
         <TrashIcon />
       </Button>
       {message ? (
-        <p aria-live="polite" className="max-w-56 text-right text-xs text-text-soft">
+        <p
+          aria-live="polite"
+          className="max-w-56 text-right text-xs text-text-soft"
+        >
           {message}
         </p>
       ) : null}
