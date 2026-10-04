@@ -136,19 +136,11 @@ export class MusicPlayerController {
   };
   showVideo = () => {
     if (this.state.track?.source.provider !== "youtube" || this.state.videoVisible) return;
-    this.update({ videoVisible: true, wantsPlay: true, status: "loading", message: "" });
+    this.update({ videoVisible: true });
   };
   hideVideo = () => {
     if (!this.state.videoVisible) return;
-    this.adapter?.destroy();
-    this.adapter = null;
-    this.update({
-      videoVisible: false,
-      wantsPlay: false,
-      status: "paused",
-      request: this.state.request + 1,
-      message: "",
-    });
+    this.update({ videoVisible: false });
   };
   play = () => {
     if (this.state.track) {

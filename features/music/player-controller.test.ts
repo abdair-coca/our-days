@@ -109,6 +109,39 @@ describe("authorized music queue", () => {
 });
 
 describe("single playback owner", () => {
+  it("resizes hidden YouTube without changing playback, position or its adapter", () => {
+    const { player, tracks } = setup();
+    const adapter = fakeAdapter();
+    player.select(tracks[0].key);
+    const request = player.getSnapshot().request;
+    expect(player.getSnapshot()).toMatchObject({ videoVisible: false, wantsPlay: true });
+    player.showVideo();
+    player.hideVideo();
+    player.bind(request, adapter);
+    confirmPlaying(player, 24);
+    player.openLibrary();
+    player.showVideo();
+    player.closeLibrary();
+    expect(player.getSnapshot()).toMatchObject({ expanded: false, videoVisible: true });
+    player.hideVideo();
+    expect(player.getSnapshot()).toMatchObject({
+      request, videoVisible: false, status: "playing", position: 24, wantsPlay: true,
+    });
+    expect(adapter.play).toHaveBeenCalledOnce();
+    expect(adapter.pause).not.toHaveBeenCalled();
+    expect(adapter.destroy).not.toHaveBeenCalled();
+    player.pause();
+    player.report(request, { status: "paused" });
+    player.showVideo();
+    player.hideVideo();
+    expect(player.getSnapshot()).toMatchObject({ request, status: "paused", wantsPlay: false });
+    expect(adapter.pause).toHaveBeenCalledOnce();
+    player.play();
+    expect(adapter.play).toHaveBeenCalledTimes(2);
+    player.stop();
+    expect(adapter.destroy).toHaveBeenCalledOnce();
+    expect(player.getSnapshot().track).toBeNull();
+  });
   it("select waits for provider readiness and playing confirmation; native resume remains usable", () => {
     const { player, tracks } = setup();
     const adapter = fakeAdapter();
@@ -182,6 +215,26 @@ describe("single playback owner", () => {
 });
 
 describe("temporary music sessions", () => {
+  it("keeps temporary YouTube playing through video resizing and restores visibility", () => {
+    const { player, tracks } = setup();
+    player.select(tracks[0].key);
+    player.showVideo();
+    confirmPlaying(player, 20);
+    const token = player.beginTemporary("story", tracks[2]);
+    expect(player.getSnapshot().videoVisible).toBe(false);
+    const adapter = fakeAdapter();
+    const request = player.getSnapshot().request;
+    player.bind(request, adapter);
+    confirmPlaying(player, 8);
+    player.showVideo();
+    player.hideVideo();
+    expect(player.getSnapshot()).toMatchObject({ request, status: "playing", position: 8 });
+    expect(adapter.destroy).not.toHaveBeenCalled();
+    player.endTemporary(token);
+    expect(player.getSnapshot()).toMatchObject({
+      track: { key: tracks[0].key }, position: 20, wantsPlay: true, videoVisible: true,
+    });
+  });
   it("preserves the original playing session while a preview source changes", () => {
     const { player, tracks } = setup();
     player.select(tracks[0].key);
