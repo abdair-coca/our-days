@@ -14,10 +14,17 @@ import { resolveSongLink } from "@/features/music/song-source";
 import { processImage } from "@/features/photos/image-processing";
 import { photoGuidelines } from "@/features/photos/photo-guidelines";
 import { useDemoSubmit } from "@/hooks/use-demo-submit";
-import { memoryFormSchema, type MemoryFormValues } from "@/lib/validations/memory";
+import {
+  memoryFormSchema,
+  type MemoryFormValues,
+} from "@/lib/validations/memory";
 import type { MemoryPhoto } from "@/types/memory";
 import { Button } from "@/components/ui/button";
-import { SongEmbed } from "@/components/music/song-embed";
+import {
+  useMusicPlayer,
+  useTemporaryMusic,
+} from "@/components/music/music-player";
+import type { MusicTrack } from "@/features/music/library";
 import { ErrorState, SuccessState } from "@/components/ui/status-panel";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -78,7 +85,9 @@ const memoryResolver: Resolver<MemoryFormValues> = async (values) => {
   return { values: {}, errors };
 };
 
-function createInitialPhotos(photos: readonly MemoryPhoto[] = []): PhotoDraft[] {
+function createInitialPhotos(
+  photos: readonly MemoryPhoto[] = [],
+): PhotoDraft[] {
   return photos.map((photo, index) => ({
     byteSize: photo.byteSize,
     gradient: photo.gradient,
@@ -102,7 +111,9 @@ function PhotoPreview({ photo }: { photo: PhotoDraft }) {
       className="aspect-[4/3] w-full rounded-[var(--radius-card)] bg-cover bg-center"
       role="img"
       style={{
-        backgroundImage: photo.preview ? `url(${photo.preview})` : photo.gradient,
+        backgroundImage: photo.preview
+          ? `url(${photo.preview})`
+          : photo.gradient,
       }}
     />
   );
@@ -115,6 +126,7 @@ export function MemoryForm({
   mode,
 }: MemoryFormProps) {
   const router = useRouter();
+  const { refresh: refreshMusic } = useMusicPlayer();
   const demoSubmit = useDemoSubmit();
   const [photos, setPhotos] = useState<PhotoDraft[]>(() =>
     createInitialPhotos(initialPhotos),
@@ -133,14 +145,31 @@ export function MemoryForm({
   const isSubmitting = demoSubmit.state === "submitting";
   const [isPreparingPhotos, setIsPreparingPhotos] = useState(false);
   const [songPreviewUrl, setSongPreviewUrl] = useState("");
-  const [photoProgress, setPhotoProgress] = useState({ completed: 0, total: 0 });
+  const [photoProgress, setPhotoProgress] = useState({
+    completed: 0,
+    total: 0,
+  });
   const [photoError, setPhotoError] = useState("");
   const isBusy = isSubmitting || isPreparingPhotos;
   const songUrlValue = previewValues.songUrl ?? "";
-  const isSongPreviewOpen = songPreviewUrl === songUrlValue && songUrlValue.length > 0;
-  const songSource = songUrlValue.trim()
-    ? resolveSongLink(songUrlValue)
+  const isSongPreviewOpen =
+    songPreviewUrl === songUrlValue && songUrlValue.length > 0;
+  const songSource = songUrlValue.trim() ? resolveSongLink(songUrlValue) : null;
+  const previewTrack: MusicTrack | null = songSource?.ok
+    ? {
+        id: "preview",
+        key: "preview:memory-form",
+        addedAt: "",
+        addedBy: "",
+        title: previewValues.songTitle || "Vista previa",
+        artist: previewValues.songArtist || "",
+        url: songUrlValue,
+        source: songSource,
+        memoryId: memoryId || "",
+        memoryTitle: "Vista previa",
+      }
     : null;
+  useTemporaryMusic(previewTrack, isSongPreviewOpen);
 
   useEffect(() => {
     const urls = previewUrls.current;
@@ -174,7 +203,11 @@ export function MemoryForm({
 
         if (photo.file) {
           processed = await processImage(photo.file);
-          formData.append(`photo:${photo.id}`, processed.file, processed.file.name);
+          formData.append(
+            `photo:${photo.id}`,
+            processed.file,
+            processed.file.name,
+          );
           setPhotoProgress((current) => ({
             ...current,
             completed: current.completed + 1,
@@ -214,6 +247,7 @@ export function MemoryForm({
       });
 
       if (result.ok && result.mode === "supabase" && result.memoryId) {
+        await refreshMusic();
         router.push(`/memories/${result.memoryId}`);
         router.refresh();
       }
@@ -232,7 +266,8 @@ export function MemoryForm({
     const selectedFiles = Array.from(event.target.files ?? []);
     const availableSlots = photoGuidelines.maxFiles - photos.length;
     const invalidType = selectedFiles.find(
-      (file) => !photoGuidelines.acceptedTypes.some((type) => type === file.type),
+      (file) =>
+        !photoGuidelines.acceptedTypes.some((type) => type === file.type),
     );
     const oversizedFile = selectedFiles.find(
       (file) => file.size > photoGuidelines.maxSourceSizeBytes,
@@ -251,7 +286,9 @@ export function MemoryForm({
     }
 
     if (oversizedFile) {
-      setPhotoError("Cada foto debe pesar menos de 12 MB antes de optimizarla.");
+      setPhotoError(
+        "Cada foto debe pesar menos de 12 MB antes de optimizarla.",
+      );
       event.target.value = "";
       return;
     }
@@ -314,11 +351,14 @@ export function MemoryForm({
     >
       <div className="space-y-8">
         <div className="rounded-[var(--radius-card)] border border-accent-soft bg-accent-soft/35 p-4 text-sm leading-6 text-text">
-          Tus fotos se redimensionan y comprimen antes de subirlas para cuidar la calidad y el espacio.
+          Tus fotos se redimensionan y comprimen antes de subirlas para cuidar
+          la calidad y el espacio.
         </div>
 
         <fieldset className="grid gap-5" disabled={isBusy}>
-          <legend className="font-serif text-2xl font-semibold">El recuerdo</legend>
+          <legend className="font-serif text-2xl font-semibold">
+            El recuerdo
+          </legend>
           <Input
             error={errors.title?.message}
             id="title"
@@ -349,7 +389,9 @@ export function MemoryForm({
         <fieldset className="grid gap-5" disabled={isBusy}>
           <legend className="font-serif text-2xl font-semibold">Fotos</legend>
           <div className="flex items-end justify-between gap-4">
-            <p className="text-sm text-text-soft">La primera será la portada del recuerdo.</p>
+            <p className="text-sm text-text-soft">
+              La primera será la portada del recuerdo.
+            </p>
             <span className="text-sm text-text-soft">
               {photos.length} {photos.length === 1 ? "foto" : "fotos"}
             </span>
@@ -384,7 +426,9 @@ export function MemoryForm({
                       <p className="truncate text-sm font-semibold">
                         {index === 0 ? "Portada" : `Foto ${index + 1}`}
                       </p>
-                      <p className="truncate text-xs text-text-soft">{photo.name}</p>
+                      <p className="truncate text-xs text-text-soft">
+                        {photo.name}
+                      </p>
                     </div>
                     <div className="flex shrink-0 gap-1">
                       <Button
@@ -432,7 +476,9 @@ export function MemoryForm({
         </fieldset>
 
         <fieldset className="grid gap-5" disabled={isBusy}>
-          <legend className="font-serif text-2xl font-semibold">Canción opcional</legend>
+          <legend className="font-serif text-2xl font-semibold">
+            Canción opcional
+          </legend>
           <div className="grid gap-5 sm:grid-cols-2">
             <Input
               error={errors.songTitle?.message}
@@ -484,15 +530,27 @@ export function MemoryForm({
 
                 {songSource.ok ? (
                   <button
-                    aria-label={isSongPreviewOpen ? "Cerrar vista previa" : "Probar canción"}
+                    aria-label={
+                      isSongPreviewOpen
+                        ? "Cerrar vista previa"
+                        : "Probar canción"
+                    }
                     className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--radius-button)] border border-border bg-surface px-3 text-accent transition-[color,background-color,border-color,transform] duration-[var(--motion-fast)] hover:-translate-y-px hover:border-accent hover:bg-accent-soft/50 focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-accent motion-reduce:transition-none motion-reduce:hover:transform-none"
-                    onClick={() => setSongPreviewUrl(isSongPreviewOpen ? "" : songUrlValue)}
-                    title={isSongPreviewOpen ? "Cerrar vista previa" : "Probar canción"}
+                    onClick={() =>
+                      setSongPreviewUrl(isSongPreviewOpen ? "" : songUrlValue)
+                    }
+                    title={
+                      isSongPreviewOpen
+                        ? "Cerrar vista previa"
+                        : "Probar canción"
+                    }
                     type="button"
                   >
                     {isSongPreviewOpen ? <XIcon /> : <PlayIcon />}
                     <span className="sr-only">
-                      {isSongPreviewOpen ? "Cerrar vista previa" : "Probar canción"}
+                      {isSongPreviewOpen
+                        ? "Cerrar vista previa"
+                        : "Probar canción"}
                     </span>
                   </button>
                 ) : null}
@@ -500,11 +558,9 @@ export function MemoryForm({
 
               {songSource.ok && isSongPreviewOpen ? (
                 <div className="mt-4">
-                  <SongEmbed
-                    autoplay
-                    source={songSource}
-                    title={previewValues.songTitle || "esta canción"}
-                  />
+                  <p className="text-xs text-text-soft">
+                    Escucha la vista previa en el reproductor flotante.
+                  </p>
                 </div>
               ) : null}
             </div>
@@ -515,7 +571,9 @@ export function MemoryForm({
           <Button
             disabled={isBusy}
             loading={isBusy}
-            loadingLabel={isPreparingPhotos ? "Preparando fotos…" : "Guardando…"}
+            loadingLabel={
+              isPreparingPhotos ? "Preparando fotos…" : "Guardando…"
+            }
             type="submit"
           >
             {mode === "create" ? "Guardar recuerdo" : "Guardar cambios"}
@@ -526,12 +584,12 @@ export function MemoryForm({
                 ? `Preparando fotos ${photoProgress.completed}/${photoProgress.total}…`
                 : "Preparando fotos…"
               : demoSubmit.state === "success"
-              ? demoSubmit.message
-              : demoSubmit.state === "error"
                 ? demoSubmit.message
-              : isDirty
-                ? "Cambios locales sin guardar."
-                : "Sin cambios."}
+                : demoSubmit.state === "error"
+                  ? demoSubmit.message
+                  : isDirty
+                    ? "Cambios locales sin guardar."
+                    : "Sin cambios."}
           </p>
         </div>
 
@@ -548,7 +606,9 @@ export function MemoryForm({
       </div>
 
       <aside className="h-fit rounded-[var(--radius-card)] border border-border-soft bg-surface-soft p-5 lg:sticky lg:top-6">
-        <p className="text-xs font-bold tracking-[0.16em] text-olive uppercase">Preview</p>
+        <p className="text-xs font-bold tracking-[0.16em] text-olive uppercase">
+          Preview
+        </p>
         <div className="mt-4 overflow-hidden rounded-[var(--radius-card)] bg-surface shadow-[var(--shadow-card)]">
           {photos[0] ? (
             <PhotoPreview photo={photos[0]} />
@@ -565,7 +625,8 @@ export function MemoryForm({
               {previewValues.title || "Un recuerdo más"}
             </h2>
             <p className="mt-2 line-clamp-4 text-sm leading-6 text-text-soft">
-              {previewValues.description || "La historia aparecerá aquí mientras la escribes."}
+              {previewValues.description ||
+                "La historia aparecerá aquí mientras la escribes."}
             </p>
           </div>
         </div>

@@ -14,7 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MusicIcon, PlayIcon, XIcon } from "@/components/ui/icons";
 
-import { SongEmbed } from "./song-embed";
+import { useTemporaryMusic } from "./music-player";
+import type { MusicTrack } from "@/features/music/library";
 
 type SongDialogProps = {
   memoryId: string;
@@ -38,24 +39,47 @@ export function SongDialog({
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const source = url.trim() ? resolveSongLink(url) : null;
+  const previewTrack: MusicTrack | null = source?.ok
+    ? {
+        id: "preview",
+        key: "preview:song-dialog",
+        addedAt: "",
+        addedBy: "",
+        title: title || "Vista previa",
+        artist,
+        url,
+        source,
+        memoryId,
+        memoryTitle: "Vista previa",
+      }
+    : null;
+  useTemporaryMusic(previewTrack, previewOpen);
+  const currentDialog = useRef({ isSubmitting, onClose });
+  useEffect(() => {
+    currentDialog.current = { isSubmitting, onClose };
+  }, [isSubmitting, onClose]);
 
   useEffect(() => {
+    const previousFocus = document.activeElement;
     titleInput.current?.focus();
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !isSubmitting) {
-        onClose();
+      if (event.key === "Escape" && !currentDialog.current.isSubmitting) {
+        currentDialog.current.onClose();
         return;
       }
 
       if (event.key === "Tab") {
-        const focusable = Array.from(
-          dialogPanel.current?.querySelectorAll<HTMLElement>(
-            "button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex=\"-1\"])",
-          ) ?? [],
-        );
+        const focusable = Array.from([
+          ...(dialogPanel.current?.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+          ) ?? []),
+          ...document.querySelectorAll<HTMLElement>(
+            ".music-owner-preview:not([hidden]) button:not([disabled]), .music-owner-preview:not([hidden]) a[href], .music-owner-preview:not([hidden]) iframe, .music-owner-preview:not([hidden]) input",
+          ),
+        ]);
         const first = focusable[0];
         const last = focusable.at(-1);
 
@@ -77,8 +101,10 @@ export function SongDialog({
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleKeyDown);
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected)
+        previousFocus.focus();
     };
-  }, [isSubmitting, onClose]);
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -87,7 +113,9 @@ export function SongDialog({
     const parsed = memorySongSchema.safeParse({ artist, title, url });
 
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? "Revisa los datos de la canción.");
+      setError(
+        parsed.error.issues[0]?.message ?? "Revisa los datos de la canción.",
+      );
       return;
     }
 
@@ -135,7 +163,8 @@ export function SongDialog({
         aria-describedby="song-dialog-description"
         aria-labelledby="song-dialog-title"
         aria-modal="true"
-        className="w-full max-w-xl overflow-y-auto rounded-t-[var(--radius-modal)] border border-border-soft bg-surface p-5 shadow-[var(--shadow-overlay)] sm:max-h-[min(88vh,42rem)] sm:rounded-[var(--radius-modal)] sm:p-7"
+        aria-owns={previewOpen ? "global-music-player" : undefined}
+        className={`song-dialog-panel ${previewOpen ? "song-dialog-with-preview" : ""} w-full max-w-xl overflow-y-auto rounded-t-[var(--radius-modal)] border border-border-soft bg-surface p-5 shadow-[var(--shadow-overlay)] sm:max-h-[min(88vh,42rem)] sm:rounded-[var(--radius-modal)] sm:p-7`}
         ref={dialogPanel}
         role="dialog"
       >
@@ -147,11 +176,18 @@ export function SongDialog({
                 Banda sonora
               </span>
             </p>
-            <h2 className="mt-2 font-serif text-3xl font-semibold" id="song-dialog-title">
+            <h2
+              className="mt-2 font-serif text-3xl font-semibold"
+              id="song-dialog-title"
+            >
               {song ? "Editar canción" : "Añadir canción"}
             </h2>
-            <p className="mt-2 text-sm leading-6 text-text-soft" id="song-dialog-description">
-              Guarda el enlace y comprueba que sea la canción que quieres conservar.
+            <p
+              className="mt-2 text-sm leading-6 text-text-soft"
+              id="song-dialog-description"
+            >
+              Guarda el enlace y comprueba que sea la canción que quieres
+              conservar.
             </p>
           </div>
           <Button
@@ -200,7 +236,9 @@ export function SongDialog({
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold">
-                    {source.ok ? `${source.provider === "spotify" ? "Spotify" : "YouTube Music"} listo` : "Enlace no compatible"}
+                    {source.ok
+                      ? `${source.provider === "spotify" ? "Spotify" : "YouTube Music"} listo`
+                      : "Enlace no compatible"}
                   </p>
                   <p className="mt-1 text-xs text-text-soft">
                     {source.ok
@@ -210,10 +248,14 @@ export function SongDialog({
                 </div>
                 {source.ok ? (
                   <Button
-                    aria-label={previewOpen ? "Cerrar vista previa" : "Probar canción"}
+                    aria-label={
+                      previewOpen ? "Cerrar vista previa" : "Probar canción"
+                    }
                     className="shrink-0 p-3"
                     onClick={() => setPreviewOpen((current) => !current)}
-                    title={previewOpen ? "Cerrar vista previa" : "Probar canción"}
+                    title={
+                      previewOpen ? "Cerrar vista previa" : "Probar canción"
+                    }
                     variant="secondary"
                   >
                     {previewOpen ? <XIcon size={18} /> : <PlayIcon size={18} />}
@@ -222,14 +264,21 @@ export function SongDialog({
               </div>
               {source.ok && previewOpen ? (
                 <div className="mt-4">
-                  <SongEmbed autoplay source={source} title={title || "esta canción"} />
+                  <p className="text-xs text-text-soft">
+                    La vista previa está en el reproductor flotante. Al cerrar,
+                    volverás a tu música.
+                  </p>
                 </div>
               ) : null}
             </div>
           ) : null}
 
           {error && source?.ok ? (
-            <p aria-live="polite" className="text-sm font-semibold text-error" role="alert">
+            <p
+              aria-live="polite"
+              className="text-sm font-semibold text-error"
+              role="alert"
+            >
               {error}
             </p>
           ) : null}
@@ -238,7 +287,11 @@ export function SongDialog({
             <Button disabled={isSubmitting} onClick={onClose} variant="ghost">
               Cancelar
             </Button>
-            <Button loading={isSubmitting} loadingLabel="Guardando…" type="submit">
+            <Button
+              loading={isSubmitting}
+              loadingLabel="Guardando…"
+              type="submit"
+            >
               {song ? "Guardar cambios" : "Añadir canción"}
             </Button>
           </div>
