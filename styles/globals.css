@@ -81,11 +81,13 @@
 .music-track-meta a { min-width: 0; text-align: right; overflow-wrap: anywhere; text-decoration: underline; }
 .music-video-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
 .music-media-host { min-width: 200px; height: 220px; overflow: hidden; border-radius: 12px; background: var(--color-surface-soft); }
+.music-media-host.music-video-hidden { position: absolute; width: 1px; min-width: 1px; height: 1px; min-height: 1px; border-radius: 0; pointer-events: none; }
 .music-media-host iframe { display: block; width: 100%; height: 100%; border: 0; }
 .music-media-spotify { height: 152px; }
 .music-video-dock { margin-top: 10px; padding: 10px; border-radius: var(--radius-card); }
 .music-video-dock .music-media-host { height: 200px; }
 .music-video-dock .music-video-actions { margin-bottom: 6px; }
+.music-controls-collapsed { position: absolute; right: 0; bottom: 0; width: 1px; height: 1px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .music-player-controls { display: flex; justify-content: center; align-items: center; gap: 18px; margin-top: 18px; }
 .music-player-controls button { flex-shrink: 0; }
 .music-playback-status { margin-top: 12px; font-size: 12px; text-align: center; color: var(--color-text-soft); }
@@ -126,6 +128,7 @@ body:has(.music-owner-story.music-video-visible) .story-content-with-music h1 { 
   .global-music-player { right: max(24px, env(safe-area-inset-right)); --music-bottom: calc(24px + env(safe-area-inset-bottom)); }
   .music-dialog-is-open { inset: 50% auto auto 50%; transform: translate(-50%, -50%); width: min(600px, calc(100vw - 48px)); max-height: calc(100dvh - 64px); padding: 28px; border-radius: var(--radius-modal); }
   .music-media-host { height: 280px; }
+  .music-media-host.music-video-hidden { height: 1px; }
   .music-media-spotify { height: 152px; }
   .song-dialog-with-preview, body:has(.music-owner-preview.music-video-visible) .song-dialog-with-preview { margin-bottom: 0; margin-right: 400px; max-width: min(36rem, calc(100vw - 448px)); max-height: min(88vh, 42rem); }
   body:has(.music-owner-story.music-video-visible) .story-content-with-music { top: 50%; transform: translateY(-50%); margin-right: 400px; max-height: calc(100dvh - 160px); }

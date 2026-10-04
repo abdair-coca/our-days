@@ -176,8 +176,10 @@ detiene y vacía el reproductor; su estado solo dura en memoria.
 YouTube confirma el final y permite avance automático sin volver al inicio de
 la cola. Spotify conserva sus controles nativos y solo informa los estados que
 su embed confirma: no se infiere un final ni se ofrece control de volumen o
-seek de canciones. El vídeo de YouTube permanece visible con un área mínima
-de 200 × 200 px. Bloqueos del navegador y restricciones del proveedor ofrecen
+seek de canciones. YouTube se reproduce en un iframe persistente de 1 × 1 px;
+Ver vídeo amplía ese mismo iframe y Ocultar vídeo lo reduce sin pausar ni
+reiniciar la canción. Cerrar los controles conserva la reproducción; detener
+destruye el reproductor. Bloqueos del navegador y restricciones del proveedor ofrecen
 Reanudar, Reintentar o abrir el enlace canónico.
 
 ## Flujo de imágenes

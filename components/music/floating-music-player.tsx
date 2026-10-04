@@ -29,20 +29,19 @@ export function FloatingMusicPlayer({ visible, libraryError }: { visible: boolea
   const videoShown = Boolean(youtube && state.videoVisible);
   const index = state.tracks.findIndex((item) => item.key === track?.key);
   const playing = state.status === "playing";
-  const needsVideo = Boolean(youtube && !state.videoVisible);
   const artist = track?.artist || (youtube ? "YouTube" : "Spotify");
 
   // One DOM location: opening controls or navigating never remounts the host.
   useEffect(() => {
     const current = controller.getSnapshot();
-    if (!host.current || !current.track || (current.track.source.provider === "youtube" && !current.videoVisible)) return;
+    if (!host.current || !current.track) return;
     return mountProvider(
       host.current,
       current.track,
       (adapter) => controller.bind(current.request, adapter),
       (event) => controller.report(current.request, event),
     );
-  }, [controller, state.request, state.videoVisible]);
+  }, [controller, state.request]);
 
   useEffect(() => {
     if (!expanded) return;
@@ -68,7 +67,7 @@ export function FloatingMusicPlayer({ visible, libraryError }: { visible: boolea
         event.stopImmediatePropagation();
         const items = Array.from(panel.current?.querySelectorAll<HTMLElement>(
           'button:not([disabled]), a[href], input:not([disabled]), iframe, [tabindex="0"]',
-        ) ?? []).filter((element) => element.getClientRects().length > 0);
+        ) ?? []).filter((element) => !element.closest("[inert]") && element.getClientRects().length > 0);
         const first = items[0];
         const last = items.at(-1);
         if (!first || !last) {
@@ -99,8 +98,7 @@ export function FloatingMusicPlayer({ visible, libraryError }: { visible: boolea
   }, [controller, expanded]);
 
   function togglePlayback() {
-    if (needsVideo) controller.openLibrary();
-    else if (playing) controller.pause();
+    if (playing) controller.pause();
     else controller.play();
   }
 
@@ -131,7 +129,7 @@ export function FloatingMusicPlayer({ visible, libraryError }: { visible: boolea
         >
           <strong>{track?.title || "Sin título"}</strong><span>{artist}</span>
         </button>
-        <Button aria-label={playing ? "Pausar música" : "Reproducir música"} className="p-2" onClick={togglePlayback} title={needsVideo ? "Abre los controles para ver el vídeo" : undefined} variant="secondary">
+        <Button aria-label={playing ? "Pausar música" : "Reproducir música"} className="p-2" onClick={togglePlayback} variant="secondary">
           {playing ? <PauseIcon size={18} /> : <PlayIcon size={18} />}
         </Button>
         <Button aria-label="Cerrar reproductor y detener música" className="p-2" onClick={controller.stop} variant="quiet"><XIcon size={18} /></Button>
@@ -143,8 +141,8 @@ export function FloatingMusicPlayer({ visible, libraryError }: { visible: boolea
         aria-describedby={expanded && track ? "music-playback-status" : undefined}
         aria-labelledby={expanded ? "music-controls-title" : undefined}
         aria-modal={expanded ? true : undefined}
-        className={`music-controls-panel ${expanded ? "music-dialog-is-open" : "music-video-dock"}`}
-        hidden={!expanded && !videoShown}
+        className={`music-controls-panel ${expanded ? "music-dialog-is-open" : videoShown ? "music-video-dock" : "music-controls-collapsed"}`}
+        hidden={!expanded && !youtube}
         id="music-controls-dialog"
         ref={panel}
         role={expanded ? "dialog" : undefined}
@@ -172,29 +170,29 @@ export function FloatingMusicPlayer({ visible, libraryError }: { visible: boolea
           {videoShown ? <Button className="px-3" onClick={hideVideo} variant="quiet">Ocultar vídeo</Button> : <Button onClick={controller.showVideo} variant="secondary"><PlayIcon size={16} />Ver vídeo</Button>}
           {!expanded && videoShown ? <button className="music-text-button" onClick={controller.openLibrary} type="button">Controles</button> : null}
         </div>
-        <div className={`music-media-host ${!youtube ? "music-media-spotify" : ""}`} hidden={!track || (youtube ? !videoShown : !expanded)} ref={host} />
+        <div aria-hidden={youtube && !videoShown} className={`music-media-host ${!youtube ? "music-media-spotify" : videoShown ? "" : "music-video-hidden"}`} hidden={!track || (!youtube && !expanded)} inert={youtube && !videoShown} ref={host} />
 
         <div className="music-modal-controls" hidden={!expanded || !track}>
           <div className="music-player-controls">
             <Button aria-label="Canción anterior" disabled={Boolean(state.owner) || index <= 0} onClick={() => controller.next(-1)} variant="quiet">‹</Button>
-            <Button disabled={needsVideo} onClick={togglePlayback} variant="secondary">
+            <Button onClick={togglePlayback} variant="secondary">
               {playing ? <PauseIcon size={18} /> : <PlayIcon size={18} />}{playing ? "Pausar" : "Reproducir"}
             </Button>
             <Button aria-label="Siguiente canción" disabled={Boolean(state.owner) || index < 0 || index >= state.tracks.length - 1} onClick={() => controller.next()} variant="quiet">›</Button>
           </div>
-          <p aria-live="polite" className="music-playback-status" id="music-playback-status">{needsVideo ? "Pulsa «Ver vídeo» para reproducir esta canción." : statusLabels[state.status]}</p>
+          <p aria-live="polite" className="music-playback-status" id="music-playback-status">{statusLabels[state.status]}</p>
           {state.duration > 0 ? (
             youtube ? (
               <label className="music-seek">
                 <span className="sr-only">Posición de reproducción</span>
-                <input aria-label="Posición de reproducción" aria-valuetext={`${time(state.position)} de ${time(state.duration)}`} disabled={needsVideo} max={state.duration} min={0} onChange={(event) => controller.seek(Number(event.target.value))} step={1} type="range" value={Math.min(state.position, state.duration)} />
+                <input aria-label="Posición de reproducción" aria-valuetext={`${time(state.position)} de ${time(state.duration)}`} max={state.duration} min={0} onChange={(event) => controller.seek(Number(event.target.value))} step={1} type="range" value={Math.min(state.position, state.duration)} />
                 <span>{time(state.position)} / {time(state.duration)}</span>
               </label>
             ) : (
               <div className="music-progress"><progress aria-label="Progreso de reproducción" max={state.duration} value={Math.min(state.position, state.duration)} /><span>{time(state.position)} / {time(state.duration)}</span></div>
             )
           ) : <p className="music-time">El progreso aparecerá cuando el proveedor lo comparta.</p>}
-          {youtube ? <p className="music-message text-text-soft">YouTube necesita el vídeo visible. Al cerrar estos controles, el vídeo sigue en una ventana pequeña. Ocultarlo pausa la canción.</p> : null}
+          {youtube ? <p className="music-message text-text-soft">Ver vídeo amplía el reproductor. Ocultarlo o cerrar estos controles conserva la reproducción.</p> : null}
           {state.message ? <p aria-live="polite" className="music-message">{state.message}</p> : null}
           {track ? (
             <div className="music-provider-link">

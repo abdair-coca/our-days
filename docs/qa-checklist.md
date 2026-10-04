@@ -39,7 +39,7 @@ La aplicación tiene una base verificable de performance y resiliencia. Este doc
 - [ ] Sesión expirada: acceso devuelto a login sin mostrar datos demo.
 - [ ] Invitación inválida o caducada: mensaje específico y navegación recuperable.
 - [ ] `prefers-reduced-motion`: no hay loops ni desplazamientos innecesarios.
-- [ ] Música: una sola reproducción al navegar; cerrar detiene, anterior/siguiente no envuelven y el vídeo de YouTube conserva al menos 200 × 200 px visibles.
+- [ ] Música: una sola reproducción al navegar; cerrar controles conserva música, detener la finaliza y anterior/siguiente no envuelven. YouTube comienza en un iframe de 1 × 1 px: Ver vídeo amplía el mismo iframe y Ocultar vídeo lo reduce sin pausar, reiniciar ni perder posición. Reproducir/pausar funciona con vídeo reducido, sin foco de teclado en el iframe.
 - [ ] Vistas previas e Historias: comenzar toma la sesión musical; cerrar/finalizar restaura canción, posición y pausa previa. Pausa explícita detiene música e imágenes; pulsación larga solo imágenes.
 - [ ] Biblioteca: editar título conserva reproducción; cambiar URL carga en pausa; eliminar la canción activa detiene. Salir de sesión o cambiar de usuario/espacio vacía música y sesiones temporales.
 - [ ] Proveedores: confirmar eventos reales, Reanudar ante bloqueo y controles nativos de Spotify ante restricciones; comprobar Tab/Escape y controles accesibles en formularios e Historias.
