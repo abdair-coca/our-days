@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import {
@@ -17,14 +11,13 @@ import {
 import { resolveSongLink } from "@/features/music/song-source";
 import { formatMemoryDate } from "@/lib/utils/format-memory-date";
 import { Button } from "@/components/ui/button";
-import {
-  MusicIcon,
-  PauseIcon,
-  PlayIcon,
-  XIcon,
-} from "@/components/ui/icons";
+import { MusicIcon, PauseIcon, PlayIcon, XIcon } from "@/components/ui/icons";
 
-import { SongEmbed } from "@/components/music/song-embed";
+import {
+  useMusicPlayer,
+  useTemporaryMusic,
+} from "@/components/music/music-player";
+import type { MusicTrack } from "@/features/music/library";
 
 type MemoryPresentationProps = {
   onClose?: () => void;
@@ -38,11 +31,15 @@ export function MemoryPresentationOverlay({
   presentation,
 }: MemoryPresentationProps) {
   const shouldReduceMotion = useReducedMotion();
+  const { controller } = useMusicPlayer();
+  const dialogPanel = useRef<HTMLDivElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
+  const storyClock = useRef({ index: 0, remaining: STORY_DURATION_MS });
   const [isOpen, setIsOpen] = useState(true);
   const [phase, setPhase] = useState<"loading" | "ready" | "story">("loading");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [isHolding, setIsHolding] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [audioStarted, setAudioStarted] = useState(false);
   const [error, setError] = useState("");
@@ -57,6 +54,26 @@ export function MemoryPresentationOverlay({
     const source = resolveSongLink(presentation.backgroundSong.url);
     return source.ok ? source : null;
   }, [presentation.backgroundSong]);
+  const backgroundMemory = memories.find((memory) =>
+    memory.songs.some((song) => song.id === presentation.backgroundSong?.id),
+  );
+  const backgroundTrack: MusicTrack | null =
+    backgroundSource && presentation.backgroundSong && backgroundMemory
+      ? {
+          ...presentation.backgroundSong,
+          key: `${backgroundMemory.id}:${presentation.backgroundSong.id}`,
+          memoryId: backgroundMemory.id,
+          memoryTitle: backgroundMemory.title,
+          source: backgroundSource,
+        }
+      : null;
+  useTemporaryMusic(backgroundTrack, audioStarted && isOpen, "story");
+  const timerPaused = isPaused || isHolding;
+  const togglePause = useCallback(() => {
+    setIsPaused((paused) => !paused);
+    if (isPaused) controller.play();
+    else controller.pause();
+  }, [controller, isPaused]);
 
   const closePresentation = useCallback(() => {
     setIsOpen(false);
@@ -91,20 +108,23 @@ export function MemoryPresentationOverlay({
     }
 
     const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement;
     document.body.style.overflow = "hidden";
     closeButton.current?.focus();
 
     return () => {
       document.body.style.overflow = previousOverflow;
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected)
+        previousFocus.focus();
     };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) (closeButton.current ?? dialogPanel.current)?.focus();
   }, [isOpen, phase]);
 
   useEffect(() => {
-    if (
-      !isOpen ||
-      phase !== "story" ||
-      presentation.mode === "replay"
-    ) {
+    if (!isOpen || phase !== "story" || presentation.mode === "replay") {
       return;
     }
 
@@ -116,13 +136,25 @@ export function MemoryPresentationOverlay({
   }, [currentMemory.id, isOpen, phase, presentation.mode]);
 
   useEffect(() => {
-    if (!isOpen || phase !== "story" || isPaused) {
+    if (!isOpen || phase !== "story" || timerPaused) {
       return;
     }
 
-    const timeoutId = window.setTimeout(goNext, STORY_DURATION_MS);
-    return () => window.clearTimeout(timeoutId);
-  }, [goNext, isOpen, isPaused, phase]);
+    if (storyClock.current.index !== currentIndex)
+      storyClock.current = {
+        index: currentIndex,
+        remaining: STORY_DURATION_MS,
+      };
+    const startedAt = Date.now();
+    const timeoutId = window.setTimeout(goNext, storyClock.current.remaining);
+    return () => {
+      window.clearTimeout(timeoutId);
+      storyClock.current.remaining = Math.max(
+        0,
+        storyClock.current.remaining - (Date.now() - startedAt),
+      );
+    };
+  }, [currentIndex, goNext, isOpen, timerPaused, phase]);
 
   useEffect(() => {
     if (!nextMemory?.photos[0]?.src) {
@@ -134,14 +166,51 @@ export function MemoryPresentationOverlay({
   }, [nextMemory]);
 
   useEffect(() => {
-    if (!isOpen || phase !== "story") {
+    if (!isOpen) {
       return;
     }
 
     function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Tab") {
+        const focusable = [
+          ...(dialogPanel.current?.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), a[href], [tabindex="0"]',
+          ) ?? []),
+          ...document.querySelectorAll<HTMLElement>(
+            ".music-owner-story:not([hidden]) button:not([disabled]), .music-owner-story:not([hidden]) a[href], .music-owner-story:not([hidden]) iframe, .music-owner-story:not([hidden]) input",
+          ),
+        ];
+        const first = focusable[0];
+        const last = focusable.at(-1);
+        if (
+          first &&
+          last &&
+          event.shiftKey &&
+          document.activeElement === first
+        ) {
+          event.preventDefault();
+          last.focus();
+        } else if (
+          first &&
+          last &&
+          !event.shiftKey &&
+          document.activeElement === last
+        ) {
+          event.preventDefault();
+          first.focus();
+        }
+        return;
+      }
       if (event.key === "Escape") {
         event.preventDefault();
         closePresentation();
+      } else if (
+        phase !== "story" ||
+        (event.target instanceof Element &&
+          (event.target.closest("#global-music-player") ||
+            event.target.closest("button, a, input")))
+      ) {
+        return;
       } else if (event.key === "ArrowRight" || event.key === "Enter") {
         event.preventDefault();
         goNext();
@@ -150,17 +219,18 @@ export function MemoryPresentationOverlay({
         goPrevious();
       } else if (event.key === " ") {
         event.preventDefault();
-        setIsPaused((paused) => !paused);
+        togglePause();
       }
     }
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [closePresentation, goNext, goPrevious, isOpen, phase]);
+  }, [closePresentation, goNext, goPrevious, isOpen, phase, togglePause]);
 
   async function startPresentation() {
     setIsStarting(true);
     setError("");
+    setAudioStarted(true);
 
     if (presentation.mode === "welcome") {
       const result = await startMemoryWelcomeAction();
@@ -169,7 +239,6 @@ export function MemoryPresentationOverlay({
       }
     }
 
-    setAudioStarted(Boolean(backgroundSource));
     setPhase("story");
     setIsStarting(false);
   }
@@ -184,7 +253,10 @@ export function MemoryPresentationOverlay({
     <div
       aria-label="Presentación de recuerdos"
       aria-modal="true"
+      aria-owns={audioStarted ? "global-music-player" : undefined}
       className="fixed inset-0 z-50 overflow-hidden bg-[#1d1715] text-white"
+      ref={dialogPanel}
+      tabIndex={-1}
       role="dialog"
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(196,126,104,0.28),transparent_42%),radial-gradient(circle_at_bottom_right,rgba(110,126,95,0.2),transparent_40%)]" />
@@ -206,7 +278,11 @@ export function MemoryPresentationOverlay({
                   : { opacity: [0.7, 1, 0.7], scale: [1, 1.035, 1] }
               }
               className="flex size-20 items-center justify-center rounded-full border border-white/15 bg-white/10 text-3xl"
-              transition={{ duration: 2.2, ease: "easeInOut", repeat: Infinity }}
+              transition={{
+                duration: 2.2,
+                ease: "easeInOut",
+                repeat: Infinity,
+              }}
             >
               ♥
             </motion.div>
@@ -259,7 +335,9 @@ export function MemoryPresentationOverlay({
               loadingLabel="Preparando…"
               onClick={startPresentation}
             >
-              {backgroundSource ? "Comenzar con música" : "Comenzar presentación"}
+              {backgroundSource
+                ? "Comenzar con música"
+                : "Comenzar presentación"}
             </Button>
             <Button
               aria-label="Cerrar presentación"
@@ -292,7 +370,10 @@ export function MemoryPresentationOverlay({
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(24,18,16,0.6),rgba(24,18,16,0.1)_42%,rgba(24,18,16,0.88))]" />
 
             <div className="absolute inset-x-4 top-4 z-20 sm:inset-x-8 sm:top-7">
-              <div className="flex gap-1.5" aria-label="Progreso de la presentación">
+              <div
+                className="flex gap-1.5"
+                aria-label="Progreso de la presentación"
+              >
                 {memories.map((memory, index) => (
                   <span
                     className="relative h-1 flex-1 overflow-hidden rounded-full bg-white/25"
@@ -307,7 +388,9 @@ export function MemoryPresentationOverlay({
                         key={`${memory.id}-${currentIndex}`}
                         style={{
                           animationDuration: `${STORY_DURATION_MS}ms`,
-                          animationPlayState: isPaused ? "paused" : "running",
+                          animationPlayState: timerPaused
+                            ? "paused"
+                            : "running",
                         }}
                       />
                     ) : null}
@@ -322,20 +405,39 @@ export function MemoryPresentationOverlay({
                       ? "Su historia"
                       : "Para ponerse al día"}
                 </p>
-                <Button
-                  aria-label="Cerrar presentación"
-                  className="rounded-full bg-black/20 p-3 text-white hover:bg-black/35"
-                  onClick={closePresentation}
-                  ref={closeButton}
-                  title="Cerrar"
-                  variant="quiet"
-                >
-                  <XIcon size={18} />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    aria-label={
+                      isPaused ? "Reanudar presentación" : "Pausar presentación"
+                    }
+                    className="rounded-full bg-black/25 p-3 text-white hover:bg-black/40"
+                    onClick={togglePause}
+                    title={isPaused ? "Reanudar" : "Pausar"}
+                    variant="quiet"
+                  >
+                    {isPaused ? (
+                      <PlayIcon size={18} />
+                    ) : (
+                      <PauseIcon size={18} />
+                    )}
+                  </Button>
+                  <Button
+                    aria-label="Cerrar presentación"
+                    className="rounded-full bg-black/20 p-3 text-white hover:bg-black/35"
+                    onClick={closePresentation}
+                    ref={closeButton}
+                    title="Cerrar"
+                    variant="quiet"
+                  >
+                    <XIcon size={18} />
+                  </Button>
+                </div>
               </div>
             </div>
 
-            <div className="absolute inset-x-4 top-1/2 z-10 mx-auto flex max-w-5xl -translate-y-1/2 items-center justify-center sm:inset-x-16">
+            <div
+              className={`story-content absolute inset-x-4 top-1/2 z-10 mx-auto flex max-w-5xl items-center justify-center sm:inset-x-16 ${audioStarted && backgroundSource ? "story-content-with-music" : "-translate-y-1/2"}`}
+            >
               <AnimatePresence initial={false} mode="wait">
                 <motion.article
                   animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -350,11 +452,13 @@ export function MemoryPresentationOverlay({
                       {currentPhoto?.src ? (
                         <motion.img
                           alt={currentPhoto.alt}
-                          animate={{ scale: shouldReduceMotion ? 1 : 1.02 }}
-                          className="size-full object-cover"
-                          initial={{ scale: shouldReduceMotion ? 1 : 1.045 }}
+                          className={`size-full object-cover ${shouldReduceMotion ? "" : "story-photo-zoom"}`}
+                          style={{
+                            animationPlayState: timerPaused
+                              ? "paused"
+                              : "running",
+                          }}
                           src={currentPhoto.src}
-                          transition={{ duration: 7, ease: "linear" }}
                         />
                       ) : (
                         <div
@@ -389,69 +493,35 @@ export function MemoryPresentationOverlay({
               aria-label="Recuerdo anterior"
               className="absolute inset-y-24 left-0 z-20 w-1/3 cursor-w-resize focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-white"
               onClick={goPrevious}
-              onPointerDown={() => setIsPaused(true)}
-              onPointerUp={() => setIsPaused(false)}
-              onPointerCancel={() => setIsPaused(false)}
+              onPointerDown={() => setIsHolding(true)}
+              onPointerUp={() => setIsHolding(false)}
+              onPointerCancel={() => setIsHolding(false)}
+              onLostPointerCapture={() => setIsHolding(false)}
               type="button"
             />
             <button
               aria-label="Siguiente recuerdo"
               className="absolute inset-y-24 right-0 z-20 w-1/3 cursor-e-resize focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-white"
               onClick={goNext}
-              onPointerDown={() => setIsPaused(true)}
-              onPointerUp={() => setIsPaused(false)}
-              onPointerCancel={() => setIsPaused(false)}
+              onPointerDown={() => setIsHolding(true)}
+              onPointerUp={() => setIsHolding(false)}
+              onPointerCancel={() => setIsHolding(false)}
+              onLostPointerCapture={() => setIsHolding(false)}
               type="button"
             />
 
             <div className="absolute inset-x-4 bottom-5 z-30 mx-auto flex max-w-5xl items-end justify-between gap-3 sm:inset-x-8 sm:bottom-7">
               <div className="flex min-w-0 items-end gap-2">
-                {backgroundSource && audioStarted ? (
-                  <div
-                    aria-label={`Reproduciendo ${presentation.backgroundSong?.title ?? "la canción"}`}
-                    className="relative flex min-w-0 max-w-[min(19rem,68vw)] items-center gap-2.5 overflow-hidden rounded-full border border-white/15 bg-black/30 px-2.5 py-2 shadow-[0_12px_35px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:gap-3 sm:px-3 sm:py-2.5"
+                {error ? (
+                  <p
+                    className="max-w-xs rounded-full bg-black/30 px-3 py-2 text-xs text-white/75"
                     role="status"
                   >
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-[#e6b9a8] sm:size-9">
-                      <MusicIcon aria-hidden="true" size={15} />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate text-xs font-semibold text-white/90 sm:text-sm">
-                        {presentation.backgroundSong?.title ?? "La canción"}
-                      </span>
-                      <span className="block truncate text-[10px] tracking-[0.12em] text-white/50 uppercase sm:text-[11px]">
-                        {presentation.backgroundSong?.artist ||
-                          (backgroundSource.provider === "spotify"
-                            ? "Spotify"
-                            : "YouTube Music")}
-                      </span>
-                    </span>
-                    <SongEmbed
-                      autoplay
-                      compact
-                      visuallyHidden
-                      source={backgroundSource}
-                      title={presentation.backgroundSong?.title ?? "la canción"}
-                    />
-                  </div>
-                ) : null}
-                {error ? (
-                  <p className="max-w-xs rounded-full bg-black/30 px-3 py-2 text-xs text-white/75" role="status">
                     {error}
                   </p>
                 ) : null}
               </div>
-              <Button
-                aria-label={isPaused ? "Reanudar presentación" : "Pausar presentación"}
-                className="rounded-full bg-black/25 p-3 text-white hover:bg-black/40"
-                onClick={() => setIsPaused((paused) => !paused)}
-                title={isPaused ? "Reanudar" : "Pausar"}
-                variant="quiet"
-              >
-                {isPaused ? <PlayIcon size={18} /> : <PauseIcon size={18} />}
-              </Button>
             </div>
-
           </motion.div>
         )}
       </AnimatePresence>
