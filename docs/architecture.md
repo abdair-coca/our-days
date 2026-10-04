@@ -22,7 +22,7 @@ La Fase 0 usa datos locales deterministas. Supabase queda preparado como seam de
 | Formularios | React Hook Form + Zod; validación compartida en `lib/validations`. |
 | Backend futuro | Server Actions por defecto; Route Handlers solo cuando hagan falta. |
 | Plataforma | Supabase para PostgreSQL, Auth y Storage; Vercel para Next.js. |
-| Música | Colección de canciones por recuerdo con enlaces canónicos y embeds oficiales de Spotify/YouTube; sin SDKs ni OAuth. |
+| Música | Biblioteca derivada de canciones por recuerdo; reproductor global con las APIs oficiales de los embeds de Spotify/YouTube, sin OAuth. |
 | Imágenes | Storage privado; resize, compresión, thumbnails, lazy loading y signed URLs cuando corresponda. |
 
 ## Mapa de módulos
@@ -80,7 +80,7 @@ La interfaz `MemoryCatalog` de `features/memories/catalog.ts` es el seam de lect
 
 `localMemoryCatalog` es el adaptador actual para el prototipo. Más adelante, un adaptador Supabase podrá satisfacer la misma interfaz sin filtrar detalles de PostgreSQL hacia las páginas. La interfaz permanece pequeña; ordenamiento, lookup y reglas de datos viven dentro del módulo.
 
-`MemoryRepository` extiende ese seam para las mutaciones de recuerdos y canciones. Las operaciones `addSong`, `updateSong` y `removeSong` están aisladas del formulario: el servidor deriva `added_by` desde la sesión y normaliza la URL antes de persistirla. La pantalla de detalle consume `Memory.songs`, ordenadas por `created_at` ascendente, y mantiene como máximo un reproductor inline activo por recuerdo.
+`MemoryRepository` extiende ese seam para las mutaciones de recuerdos y canciones. Las operaciones `addSong`, `updateSong` y `removeSong` están aisladas del formulario: el servidor deriva `added_by` desde la sesión y normaliza la URL antes de persistirla. La pantalla de detalle consume `Memory.songs`, ordenadas por `created_at` ascendente, y envía la selección al único reproductor global. Las mutaciones exitosas actualizan su biblioteca sin iniciar reproducción.
 
 ## Modelo de datos futuro
 
@@ -159,7 +159,26 @@ una presentación de replay con todos los recuerdos ordenados cronológicamente.
 No usa ni altera `memory_views` o `welcome_seen_at`; sirve como acceso
 persistente para volver a ver la narrativa en cualquier momento. La canción de
 fondo se resuelve una sola vez y el embed permanece montado durante el cambio de
-story para conservar la reproducción.
+story para conservar la reproducción. El mismo host vive en el layout raíz,
+por encima de las transiciones de página. Comenzar guarda y pausa la sesión
+musical anterior; cerrar o finalizar restaura su canción y posición, y solo
+reanuda si estaba reproduciéndose. La pausa explícita detiene imágenes y música;
+mantener pulsada la navegación pausa únicamente las imágenes.
+
+La biblioteca musical se obtiene mediante una Server Action que valida usuario
+y espacio y lee el catálogo autorizado. Conserva el orden reciente de recuerdos
+y el orden de sus canciones; el mismo enlace en dos recuerdos mantiene dos
+entradas. Las vistas previas comparten el controlador global mediante sesiones
+temporales. No se reproduce al abrir un formulario o actualizar la biblioteca.
+Salir de la sesión, cambiar de usuario/espacio o visitar una ruta pública
+detiene y vacía el reproductor; su estado solo dura en memoria.
+
+YouTube confirma el final y permite avance automático sin volver al inicio de
+la cola. Spotify conserva sus controles nativos y solo informa los estados que
+su embed confirma: no se infiere un final ni se ofrece control de volumen o
+seek de canciones. El vídeo de YouTube permanece visible con un área mínima
+de 200 × 200 px. Bloqueos del navegador y restricciones del proveedor ofrecen
+Reanudar, Reintentar o abrir el enlace canónico.
 
 ## Flujo de imágenes
 
