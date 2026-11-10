@@ -2,7 +2,7 @@ import Link from "next/link";
 
 
 import { MemoryCard } from "@/components/memory/memory-card";
-import { MemoryPresentationOverlay } from "@/components/memory/memory-presentation";
+import { PendingMemoryPresentation } from "@/components/memory/memory-presentation";
 import { AnimatedHeadline, CountUp } from "@/components/motion/animated-headline";
 import { Reveal } from "@/components/motion/reveal";
 import { ButtonLink } from "@/components/ui/button-link";
@@ -29,7 +29,7 @@ export default async function HomePage() {
 
   return (
     <>
-      {presentation ? <MemoryPresentationOverlay presentation={presentation} /> : null}
+      <PendingMemoryPresentation presentation={presentation} />
       <div className="container-app py-8 sm:py-12">
       <Reveal>
         <section

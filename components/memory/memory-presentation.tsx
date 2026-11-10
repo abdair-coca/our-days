@@ -26,10 +26,31 @@ type MemoryPresentationProps = {
 
 const STORY_DURATION_MS = 7000;
 
+/**
+ * Opens the story the page arrived with and keeps it until it is closed.
+ * Marking memories as seen can make a later server render (a router refresh,
+ * or a session refresh during a server action) return a shorter story or none
+ * at all; that must not cut off the one being watched.
+ */
+export function PendingMemoryPresentation({
+  presentation,
+}: {
+  presentation: MemoryPresentation | null;
+}) {
+  const [arrivedWith] = useState(presentation);
+
+  return arrivedWith ? (
+    <MemoryPresentationOverlay presentation={arrivedWith} />
+  ) : null;
+}
+
 export function MemoryPresentationOverlay({
   onClose,
-  presentation,
+  presentation: initialPresentation,
 }: MemoryPresentationProps) {
+  // The story is fixed once it opens: a refreshed, shorter list would leave
+  // the current index past its end.
+  const [presentation] = useState(initialPresentation);
   const shouldReduceMotion = useReducedMotion();
   const { controller, state: musicState } = useMusicPlayer();
   const dialogPanel = useRef<HTMLDivElement>(null);
