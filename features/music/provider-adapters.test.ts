@@ -37,6 +37,9 @@ function provider() {
     seekTo: vi.fn(),
     getCurrentTime: () => 12,
     getDuration: () => 90,
+    setVolume: vi.fn(),
+    mute: vi.fn(),
+    unMute: vi.fn(),
     destroy: vi.fn(),
   };
   class Player {
@@ -87,6 +90,14 @@ describe("official YouTube adapter lifecycle", () => {
     expect(player.getSnapshot().status).toBe("playing");
     await vi.advanceTimersByTimeAsync(500);
     expect(player.getSnapshot()).toMatchObject({ position: 12, duration: 90 });
+    expect(fake.native.unMute).not.toHaveBeenCalled();
+    player.setVolume(0.4);
+    expect(fake.native.unMute).toHaveBeenCalledOnce();
+    expect(fake.native.setVolume).toHaveBeenCalledWith(40);
+    player.toggleMute();
+    expect(fake.native.mute).toHaveBeenCalledOnce();
+    player.skip(-30);
+    expect(fake.native.seekTo).toHaveBeenLastCalledWith(0, true);
     player.pause();
     fake.events().onStateChange({ data: 2 });
     expect(player.getSnapshot().status).toBe("paused");

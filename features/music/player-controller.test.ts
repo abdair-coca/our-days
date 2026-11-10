@@ -427,3 +427,57 @@ describe("temporary music sessions", () => {
     expect(player.getSnapshot().track).toBeNull();
   });
 });
+
+describe("listener controls", () => {
+  it("skip clamps to the track and settles the position before the provider reports", () => {
+    const { player, tracks } = setup();
+    const adapter = fakeAdapter();
+    player.select(tracks[0].key);
+    player.bind(player.getSnapshot().request, adapter);
+    player.skip(10);
+    expect(adapter.seek).not.toHaveBeenCalled();
+    confirmPlaying(player, 95);
+    player.skip(10);
+    expect(adapter.seek).toHaveBeenLastCalledWith(100);
+    expect(player.getSnapshot().position).toBe(100);
+    player.skip(-250);
+    expect(adapter.seek).toHaveBeenLastCalledWith(0);
+    expect(player.getSnapshot().position).toBe(0);
+  });
+  it("toggle pauses a pending play request and resumes a paused track", () => {
+    const { player, tracks } = setup();
+    const adapter = fakeAdapter();
+    player.select(tracks[0].key);
+    player.bind(player.getSnapshot().request, adapter);
+    expect(player.getSnapshot()).toMatchObject({ status: "loading", wantsPlay: true });
+    player.toggle();
+    expect(adapter.pause).toHaveBeenCalledOnce();
+    expect(player.getSnapshot().wantsPlay).toBe(false);
+    player.report(player.getSnapshot().request, { status: "paused" });
+    player.toggle();
+    expect(adapter.play).toHaveBeenCalledTimes(2);
+  });
+  it("carries a volume preference to new sources and across resets", () => {
+    const { player, tracks } = setup();
+    const first = { ...fakeAdapter(), setVolume: vi.fn() };
+    player.select(tracks[0].key);
+    player.bind(player.getSnapshot().request, first);
+    expect(first.setVolume).not.toHaveBeenCalled();
+    player.setVolume(0.3);
+    expect(first.setVolume).toHaveBeenLastCalledWith(0.3);
+    player.toggleMute();
+    expect(player.getSnapshot()).toMatchObject({ muted: true, volume: 0.3 });
+    expect(first.setVolume).toHaveBeenLastCalledWith(0);
+    player.next();
+    const second = { ...fakeAdapter(), setVolume: vi.fn() };
+    player.bind(player.getSnapshot().request, second);
+    expect(second.setVolume).toHaveBeenCalledWith(0);
+    player.toggleMute();
+    expect(second.setVolume).toHaveBeenLastCalledWith(0.3);
+    player.setVolume(0);
+    player.toggleMute();
+    expect(player.getSnapshot()).toMatchObject({ muted: false, volume: 0.6 });
+    player.reset();
+    expect(player.getSnapshot()).toMatchObject({ track: null, volume: 0.6, muted: false });
+  });
+});

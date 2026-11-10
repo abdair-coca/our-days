@@ -15,6 +15,9 @@ export type PlayerState = {
   expanded: boolean;
   videoVisible: boolean;
   message: string;
+  /** Listener preference (0–1); providers without a volume API ignore it. */
+  volume: number;
+  muted: boolean;
 };
 export type PlaybackEvent = {
   status?: PlaybackStatus;
@@ -26,6 +29,8 @@ export interface PlaybackAdapter {
   play(): void;
   pause(): void;
   seek(seconds: number): void;
+  /** Optional: only providers with a documented volume API implement it. */
+  setVolume?(volume: number): void;
   destroy(): void;
 }
 type Snapshot = {
@@ -36,6 +41,11 @@ type Snapshot = {
   videoVisible: boolean;
 };
 type TemporarySession = { token: number; closed: boolean; snapshot: Snapshot };
+
+/** Playing, or loading after an explicit play request: the UI offers Pause. */
+export function isPlaybackActive(state: Pick<PlayerState, "status" | "wantsPlay">) {
+  return state.status === "playing" || (state.status === "loading" && state.wantsPlay);
+}
 
 const initialState: PlayerState = {
   identity: null,
@@ -50,6 +60,8 @@ const initialState: PlayerState = {
   expanded: false,
   videoVisible: false,
   message: "",
+  volume: 1,
+  muted: false,
 };
 
 /** Owns queue, playback arbitration and temporary sessions; providers report facts. */
@@ -74,7 +86,12 @@ export class MusicPlayerController {
     this.adapter?.destroy();
     this.adapter = null;
     this.sessions = [];
-    this.state = { ...initialState, request: this.state.request + 1 };
+    this.state = {
+      ...initialState,
+      request: this.state.request + 1,
+      volume: this.state.volume,
+      muted: this.state.muted,
+    };
     this.listeners.forEach((listener) => listener());
   };
   setLibrary = (identity: string, tracks: readonly MusicTrack[]) => {
@@ -152,9 +169,32 @@ export class MusicPlayerController {
     this.update({ wantsPlay: false });
     this.adapter?.pause();
   };
+  toggle = () => {
+    if (isPlaybackActive(this.state)) this.pause();
+    else this.play();
+  };
   seek = (seconds: number) => {
-    if (this.state.duration > 0)
-      this.adapter?.seek(Math.max(0, Math.min(seconds, this.state.duration)));
+    if (!(this.state.duration > 0)) return;
+    const position = Math.max(0, Math.min(seconds, this.state.duration));
+    // Optimistic: the scrubber settles immediately instead of snapping back
+    // until the provider's next progress report.
+    this.update({ position });
+    this.adapter?.seek(position);
+  };
+  skip = (seconds: number) => this.seek(this.state.position + seconds);
+  private effectiveVolume() {
+    return this.state.muted ? 0 : this.state.volume;
+  }
+  setVolume = (value: number) => {
+    const volume = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 1));
+    this.update({ volume, muted: volume === 0 });
+    this.adapter?.setVolume?.(this.effectiveVolume());
+  };
+  toggleMute = () => {
+    if (this.state.muted)
+      this.update({ muted: false, volume: this.state.volume || 0.6 });
+    else this.update({ muted: true });
+    this.adapter?.setVolume?.(this.effectiveVolume());
   };
   next = (direction: -1 | 1 = 1) => {
     if (this.state.owner || !this.state.track) return;
@@ -170,6 +210,10 @@ export class MusicPlayerController {
       return;
     }
     this.adapter = adapter;
+    // Default volume leaves the provider untouched; a lowered or muted
+    // preference carries over to every new source.
+    if (this.state.muted || this.state.volume < 1)
+      adapter.setVolume?.(this.effectiveVolume());
     if (this.state.position) adapter.seek(this.state.position);
     if (this.state.wantsPlay) adapter.play();
     else adapter.pause();

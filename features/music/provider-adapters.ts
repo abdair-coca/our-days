@@ -7,6 +7,9 @@ type YouTubePlayer = {
   seekTo(seconds: number, allowSeekAhead: boolean): void;
   getCurrentTime(): number;
   getDuration(): number;
+  setVolume(volume: number): void;
+  mute(): void;
+  unMute(): void;
   destroy(): void;
 };
 type YouTubeApi = {
@@ -200,6 +203,13 @@ export function mountProvider(
                   player.pauseVideo();
                 },
                 seek: (seconds) => player.seekTo(seconds, true),
+                setVolume: (volume) => {
+                  if (volume <= 0) player.mute();
+                  else {
+                    player.unMute();
+                    player.setVolume(Math.round(volume * 100));
+                  }
+                },
                 destroy: () => {
                   window.clearInterval(timer);
                   window.clearTimeout(blockedTimer);
