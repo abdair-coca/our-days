@@ -10,11 +10,14 @@ import {
 import { resolveSongLink } from "@/features/music/song-source";
 import { memorySongSchema } from "@/lib/validations/memory";
 import type { MemorySong } from "@/types/memory";
+import type { SongMetadata } from "@/features/music/song-metadata";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MusicIcon, PlayIcon, XIcon } from "@/components/ui/icons";
 
 import { useTemporaryMusic } from "./music-player";
+import { SongLinkCard } from "./song-link-card";
+import { useSongMetadata } from "./use-song-metadata";
 import type { MusicTrack } from "@/features/music/library";
 
 type SongDialogProps = {
@@ -32,13 +35,43 @@ export function SongDialog({
 }: SongDialogProps) {
   const dialogPanel = useRef<HTMLDivElement>(null);
   const titleInput = useRef<HTMLInputElement>(null);
+  const urlInput = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState(song?.title ?? "");
   const [artist, setArtist] = useState(song?.artist ?? "");
   const [url, setUrl] = useState(song?.url ?? "");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Fields people typed themselves are never overwritten by a lookup.
+  const [edited, setEdited] = useState({ artist: Boolean(song), title: Boolean(song) });
+  const [found, setFound] = useState<{ artworkUrl: string; url: string } | null>(null);
+  const [flash, setFlash] = useState({ artist: 0, title: 0 });
   const source = url.trim() ? resolveSongLink(url) : null;
+  const savedSource = song ? resolveSongLink(song.url) : null;
+  const savedUrl = savedSource?.ok ? savedSource.canonicalUrl : undefined;
+  const canonicalUrl = source?.ok ? source.canonicalUrl : undefined;
+  // The saved cover belongs to the saved link; a looked-up cover to its link.
+  const artworkUrl =
+    canonicalUrl && canonicalUrl === savedUrl
+      ? (song?.artworkUrl ?? "")
+      : found && found.url === canonicalUrl
+        ? found.artworkUrl
+        : "";
+  const metadataStatus = useSongMetadata(url, {
+    onResolved: (metadata: SongMetadata | null, resolvedUrl: string) => {
+      setFound({ artworkUrl: metadata?.artworkUrl ?? "", url: resolvedUrl });
+      if (!metadata) return;
+      if (!edited.title || !title.trim()) {
+        setTitle(metadata.title);
+        setFlash((current) => ({ ...current, title: current.title + 1 }));
+      }
+      if (metadata.artist && (!edited.artist || !artist.trim())) {
+        setArtist(metadata.artist);
+        setFlash((current) => ({ ...current, artist: current.artist + 1 }));
+      }
+    },
+    skipUrl: savedUrl,
+  });
   const previewTrack: MusicTrack | null = source?.ok
     ? {
         id: "preview",
@@ -54,14 +87,15 @@ export function SongDialog({
       }
     : null;
   useTemporaryMusic(previewTrack, previewOpen);
-  const currentDialog = useRef({ isSubmitting, onClose });
+  const currentDialog = useRef({ isEditing: Boolean(song), isSubmitting, onClose });
   useEffect(() => {
-    currentDialog.current = { isSubmitting, onClose };
-  }, [isSubmitting, onClose]);
+    currentDialog.current = { isEditing: Boolean(song), isSubmitting, onClose };
+  }, [isSubmitting, onClose, song]);
 
   useEffect(() => {
     const previousFocus = document.activeElement;
-    titleInput.current?.focus();
+    // Adding starts from the link (it fills the rest); editing from the name.
+    (currentDialog.current.isEditing ? titleInput : urlInput).current?.focus();
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -128,6 +162,7 @@ export function SongDialog({
     formData.set("artist", parsed.data.artist);
     formData.set("title", parsed.data.title);
     formData.set("url", source.canonicalUrl);
+    formData.set("artworkUrl", artworkUrl);
     setIsSubmitting(true);
 
     let result: MemorySongMutationResult;
@@ -186,8 +221,8 @@ export function SongDialog({
               className="mt-2 text-sm leading-6 text-text-soft"
               id="song-dialog-description"
             >
-              Guarda el enlace y comprueba que sea la canción que quieres
-              conservar.
+              Pega el enlace: completamos el nombre, el artista y la
+              portada. Puedes cambiarlos antes de guardar.
             </p>
           </div>
           <Button
@@ -204,21 +239,8 @@ export function SongDialog({
 
         <form className="mt-6 grid gap-5" noValidate onSubmit={handleSubmit}>
           <Input
-            label="Canción"
-            onChange={(event) => setTitle(event.target.value)}
-            ref={titleInput}
-            required
-            value={title}
-          />
-          <Input
-            helpText="Puedes dejarlo vacío."
-            label="Artista"
-            onChange={(event) => setArtist(event.target.value)}
-            value={artist}
-          />
-          <Input
             error={error && !source?.ok ? error : undefined}
-            helpText="Aceptamos canciones individuales de Spotify o YouTube Music."
+            helpText="Una canción de Spotify o YouTube Music."
             inputMode="url"
             label="Enlace musical"
             onChange={(event) => {
@@ -226,52 +248,69 @@ export function SongDialog({
               setPreviewOpen(false);
               setError("");
             }}
+            placeholder="https://open.spotify.com/track/…"
+            ref={urlInput}
             required
             type="url"
             value={url}
           />
 
           {source ? (
-            <div className="rounded-[var(--radius-card)] border border-border-soft bg-surface-soft p-4">
-              <div className="flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold">
-                    {source.ok
-                      ? `${source.provider === "spotify" ? "Spotify" : "YouTube Music"} listo`
-                      : "Enlace no compatible"}
-                  </p>
-                  <p className="mt-1 text-xs text-text-soft">
-                    {source.ok
-                      ? "La vista previa solo se carga cuando la solicitas."
-                      : "Usa un enlace de una canción individual."}
-                  </p>
-                </div>
-                {source.ok ? (
+            <SongLinkCard
+              action={
+                source.ok ? (
                   <Button
-                    aria-label={
-                      previewOpen ? "Cerrar vista previa" : "Probar canción"
-                    }
-                    className="shrink-0 p-3"
+                    aria-label={previewOpen ? "Cerrar vista previa" : "Probar canción"}
+                    className="size-11 shrink-0 rounded-full! px-0! py-0!"
                     onClick={() => setPreviewOpen((current) => !current)}
-                    title={
-                      previewOpen ? "Cerrar vista previa" : "Probar canción"
-                    }
+                    title={previewOpen ? "Cerrar vista previa" : "Probar canción"}
                     variant="secondary"
                   >
                     {previewOpen ? <XIcon size={18} /> : <PlayIcon size={18} />}
                   </Button>
-                ) : null}
-              </div>
-              {source.ok && previewOpen ? (
-                <div className="mt-4">
-                  <p className="text-xs text-text-soft">
+                ) : null
+              }
+              artist={artist}
+              artworkUrl={artworkUrl || undefined}
+              footer={
+                source.ok && previewOpen ? (
+                  <p className="mt-3 text-xs text-text-soft">
                     La vista previa está en el reproductor flotante. Al cerrar,
                     volverás a tu música.
                   </p>
-                </div>
-              ) : null}
-            </div>
+                ) : null
+              }
+              source={source}
+              status={metadataStatus}
+              title={title}
+            />
           ) : null}
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Input
+              className={flash.title ? "autofill-flash" : undefined}
+              label="Canción"
+              onAnimationEnd={() => setFlash((current) => ({ ...current, title: 0 }))}
+              onChange={(event) => {
+                setTitle(event.target.value);
+                setEdited((current) => ({ ...current, title: true }));
+              }}
+              ref={titleInput}
+              required
+              value={title}
+            />
+            <Input
+              className={flash.artist ? "autofill-flash" : undefined}
+              helpText="Puedes dejarlo vacío."
+              label="Artista"
+              onAnimationEnd={() => setFlash((current) => ({ ...current, artist: 0 }))}
+              onChange={(event) => {
+                setArtist(event.target.value);
+                setEdited((current) => ({ ...current, artist: true }));
+              }}
+              value={artist}
+            />
+          </div>
 
           {error && source?.ok ? (
             <p

@@ -5,7 +5,9 @@ import type {
   MemorySongMutationInput,
   MemoryRepository,
 } from "@/features/memories/repository";
+import { isAllowedArtworkUrl } from "@/features/music/song-metadata";
 import { resolveSongLink } from "@/features/music/song-source";
+import { isPhotoPlaceholder } from "@/features/photos/photo-placeholder";
 import { demoGradients } from "@/lib/images/demo-art";
 import type { MemoryPhotoRow, MemoryRow, MemorySongRow } from "@/types/database";
 import type { Memory, MemoryPhoto, MemorySong } from "@/types/memory";
@@ -67,6 +69,8 @@ async function mapPhoto(
     height: row.height ?? undefined,
     id: row.id,
     mimeType: row.mime_type ?? undefined,
+    placeholder:
+      row.storage_path && isPhotoPlaceholder(row.visual_value) ? row.visual_value : undefined,
     src,
     storagePath: row.storage_path ?? undefined,
     width: row.width ?? undefined,
@@ -78,6 +82,7 @@ function mapSong(row: MemorySongRow): MemorySong {
     addedAt: row.created_at,
     addedBy: row.added_by,
     artist: row.artist,
+    artworkUrl: isAllowedArtworkUrl(row.artwork_url) ? row.artwork_url : undefined,
     id: row.id,
     title: row.title,
     url: row.url,
@@ -99,7 +104,54 @@ function canonicalSongInput(input: MemorySongMutationInput): MemorySongMutationI
     throw new Error("Usa un enlace de una canción de Spotify o YouTube Music.");
   }
 
-  return { artist, title, url: source.canonicalUrl };
+  const artworkUrl =
+    input.artworkUrl === undefined
+      ? undefined
+      : isAllowedArtworkUrl(input.artworkUrl)
+        ? input.artworkUrl
+        : null;
+
+  return { artist, artworkUrl, title, url: source.canonicalUrl };
+}
+
+/** Database columns for a song; the cover is only written when known. */
+function songColumns(song: MemorySongMutationInput): Record<string, unknown> {
+  return {
+    artist: song.artist,
+    title: song.title,
+    url: song.url,
+    ...(song.artworkUrl !== undefined ? { artwork_url: song.artworkUrl } : {}),
+  };
+}
+
+function isMissingArtworkColumn(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error.code === "PGRST204" || error.code === "42703") &&
+    "message" in error &&
+    String(error.message).includes("artwork_url")
+  );
+}
+
+/**
+ * Writes song columns, retrying without the cover if the artwork migration has
+ * not been applied yet, so saving a song never fails because of artwork.
+ */
+async function writeSongColumns<T>(
+  columns: Record<string, unknown>,
+  run: (columns: Record<string, unknown>) => PromiseLike<{ data: T; error: unknown }>,
+): Promise<{ data: T; error: unknown }> {
+  const result = await run(columns);
+
+  if (result.error && "artwork_url" in columns && isMissingArtworkColumn(result.error)) {
+    const withoutArtwork = { ...columns };
+    delete withoutArtwork.artwork_url;
+    return run(withoutArtwork);
+  }
+
+  return result;
 }
 
 function hasSongFields(input: MemorySongMutationInput): boolean {
@@ -249,7 +301,13 @@ export function createSupabaseMemoryRepository(
           mime_type: photo.mimeType ?? photo.file?.type ?? null,
           sort_order: sortOrder,
           storage_path: uploaded.path,
-          visual_value: uploaded.uploaded ? null : photo.visualValue ?? null,
+          // Stored photos keep their tiny preview here; art-only photos keep
+          // their decorative gradient.
+          visual_value: uploaded.path
+            ? isPhotoPlaceholder(photo.placeholder)
+              ? photo.placeholder
+              : null
+            : photo.visualValue ?? null,
           width: photo.width ?? null,
         });
       }
@@ -345,17 +403,10 @@ export function createSupabaseMemoryRepository(
     input: MemorySongMutationInput,
   ): Promise<MemorySong | null> {
     const song = canonicalSongInput(input);
-    const { data, error } = await client
-      .from("memory_songs")
-      .insert({
-        added_by: userId,
-        artist: song.artist,
-        memory_id: memoryId,
-        title: song.title,
-        url: song.url,
-      })
-      .select("*")
-      .single();
+    const { data, error } = await writeSongColumns(
+      { ...songColumns(song), added_by: userId, memory_id: memoryId },
+      (columns) => client.from("memory_songs").insert(columns).select("*").single(),
+    );
 
     if (error) {
       throw duplicateSongError(error);
@@ -383,11 +434,13 @@ export function createSupabaseMemoryRepository(
 
   function initialSongFromMemoryInput(input: {
     songArtist: string;
+    songArtworkUrl?: string | null;
     songTitle: string;
     songUrl: string;
   }): MemorySongMutationInput | null {
     const candidate = {
       artist: input.songArtist,
+      artworkUrl: input.songArtworkUrl,
       title: input.songTitle,
       url: input.songUrl,
     };
@@ -529,11 +582,22 @@ export function createSupabaseMemoryRepository(
 
       if (firstSong) {
         if (oldestSong) {
-          const { error: songError } = await client
-            .from("memory_songs")
-            .update({ ...firstSong, updated_at: new Date().toISOString() })
-            .eq("id", oldestSong.id)
-            .eq("memory_id", id);
+          // A different link without fresh artwork must not keep the old cover.
+          const artworkUrl =
+            firstSong.artworkUrl !== undefined
+              ? firstSong.artworkUrl
+              : oldestSong.url !== firstSong.url
+                ? null
+                : undefined;
+          const { error: songError } = await writeSongColumns(
+            { ...songColumns({ ...firstSong, artworkUrl }), updated_at: new Date().toISOString() },
+            (columns) =>
+              client
+                .from("memory_songs")
+                .update(columns)
+                .eq("id", oldestSong.id)
+                .eq("memory_id", id),
+          );
 
           if (songError) {
             throw duplicateSongError(songError);
@@ -581,13 +645,17 @@ export function createSupabaseMemoryRepository(
     },
     async updateSong(memoryId, songId, input) {
       const song = canonicalSongInput(input);
-      const { data, error } = await client
-        .from("memory_songs")
-        .update({ ...song, updated_at: new Date().toISOString() })
-        .eq("id", songId)
-        .eq("memory_id", memoryId)
-        .select("*")
-        .maybeSingle();
+      const { data, error } = await writeSongColumns(
+        { ...songColumns(song), updated_at: new Date().toISOString() },
+        (columns) =>
+          client
+            .from("memory_songs")
+            .update(columns)
+            .eq("id", songId)
+            .eq("memory_id", memoryId)
+            .select("*")
+            .maybeSingle(),
+      );
 
       if (error) {
         throw duplicateSongError(error);

@@ -14,7 +14,10 @@ import {
 import type { MusicTrack } from "@/features/music/library";
 import { classNames } from "@/lib/utils/class-names";
 
-type ArtworkTrack = Pick<MusicTrack, "title" | "source"> | null | undefined;
+type ArtworkTrack =
+  | (Pick<MusicTrack, "title" | "source"> & { artworkUrl?: string })
+  | null
+  | undefined;
 
 /* Warm pairs taken from the scrapbook palette, never neon. */
 const palettePairs = [
@@ -48,6 +51,7 @@ export function trackPalette(track: ArtworkTrack): CSSProperties {
 }
 
 function thumbnail(track: ArtworkTrack) {
+  if (track?.artworkUrl) return track.artworkUrl;
   return track?.source.provider === "youtube"
     ? `https://i.ytimg.com/vi/${encodeURIComponent(track.source.id)}/mqdefault.jpg`
     : null;

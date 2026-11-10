@@ -8,7 +8,9 @@ import type {
   MemoryPhotoInput,
   MemorySongMutationInput,
 } from "@/features/memories/repository";
+import { isAllowedArtworkUrl } from "@/features/music/song-metadata";
 import { resolveSongLink } from "@/features/music/song-source";
+import { isPhotoPlaceholder } from "@/features/photos/photo-placeholder";
 import { memoryFormSchema, memorySongSchema } from "@/lib/validations/memory";
 
 export type MemoryMutationResult = {
@@ -31,6 +33,7 @@ type PhotoDescriptor = {
   height?: unknown;
   id?: unknown;
   mimeType?: unknown;
+  placeholder?: unknown;
   storagePath?: unknown;
   visualValue?: unknown;
   width?: unknown;
@@ -39,6 +42,16 @@ type PhotoDescriptor = {
 function textValue(formData: FormData, key: string): string {
   const value = formData.get(key);
   return typeof value === "string" ? value : "";
+}
+
+/** Absent field → keep the stored cover; empty or foreign URL → clear it. */
+function artworkValue(formData: FormData, key: string): string | null | undefined {
+  if (!formData.has(key)) {
+    return undefined;
+  }
+
+  const value = textValue(formData, key);
+  return isAllowedArtworkUrl(value) ? value : null;
 }
 
 function optionalNumber(value: unknown): number | undefined {
@@ -87,6 +100,9 @@ function getPhotoInputs(formData: FormData): readonly MemoryPhotoInput[] {
         height: optionalNumber(descriptor.height),
         id,
         mimeType: optionalString(descriptor.mimeType),
+        placeholder: isPhotoPlaceholder(descriptor.placeholder)
+          ? descriptor.placeholder
+          : undefined,
         storagePath: optionalString(descriptor.storagePath),
         visualValue: optionalString(descriptor.visualValue),
         width: optionalNumber(descriptor.width),
@@ -115,6 +131,7 @@ function parseMemoryForm(formData: FormData):
     input: {
       ...parsed.data,
       photos: getPhotoInputs(formData),
+      songArtworkUrl: artworkValue(formData, "songArtworkUrl"),
     },
   };
 }
@@ -141,6 +158,7 @@ function parseSongForm(formData: FormData):
   return {
     input: {
       artist: parsed.data.artist,
+      artworkUrl: artworkValue(formData, "artworkUrl"),
       title: parsed.data.title,
       url: source.canonicalUrl,
     },

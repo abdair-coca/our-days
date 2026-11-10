@@ -9,6 +9,8 @@ export type MemoryPhotoInput = {
   height?: number;
   id?: string;
   mimeType?: string;
+  /** Validated data-URL preview for stored photos. */
+  placeholder?: string;
   storagePath?: string;
   visualValue?: string;
   width?: number;
@@ -19,6 +21,8 @@ export type MemoryMutationInput = {
   memoryDate: string;
   photos?: readonly MemoryPhotoInput[];
   songArtist: string;
+  /** undefined keeps the current cover; null clears it. */
+  songArtworkUrl?: string | null;
   songTitle: string;
   songUrl: string;
   title: string;
@@ -26,6 +30,8 @@ export type MemoryMutationInput = {
 
 export type MemorySongMutationInput = {
   artist: string;
+  /** undefined keeps the current cover; null clears it. */
+  artworkUrl?: string | null;
   title: string;
   url: string;
 };

@@ -32,7 +32,7 @@ export function SongCard({
 }: SongCardProps) {
   const reducedMotion = useReducedMotion();
   const source = resolveSongLink(song.url);
-  const artwork = source.ok ? { title: song.title, source } : null;
+  const artwork = source.ok ? { artworkUrl: song.artworkUrl, source, title: song.title } : null;
   const sounding = isActive && isPlaying;
   return (
     <motion.article

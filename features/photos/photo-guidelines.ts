@@ -3,6 +3,8 @@ export const photoGuidelines = {
   maxFiles: 10,
   maxLongEdgePixels: 2000,
   maxSourceSizeBytes: 12 * 1024 * 1024,
+  /** Optimised bytes sent in one save; keep below next.config bodySizeLimit. */
+  maxUploadBytesPerSave: Math.floor(3.8 * 1024 * 1024),
   outputMimeType: "image/webp",
   targetSizeLabel: "300 KB–1 MB",
   webpQuality: 0.82,

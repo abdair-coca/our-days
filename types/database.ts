@@ -68,6 +68,8 @@ export type MemoryPhotoRow = {
 export type MemorySongRow = {
   added_by: string;
   artist: string;
+  /** Absent until migration 20261110000000 is applied. */
+  artwork_url?: string | null;
   created_at: string;
   id: string;
   memory_id: string;
@@ -135,7 +137,7 @@ export type Database = {
           id?: string;
           updated_at?: string;
         };
-        Update: Partial<Pick<MemorySongRow, "artist" | "title" | "url">>;
+        Update: Partial<Pick<MemorySongRow, "artist" | "artwork_url" | "title" | "url">>;
       };
       memory_views: {
         Row: MemoryViewRow;

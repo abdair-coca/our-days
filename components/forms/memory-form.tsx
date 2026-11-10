@@ -25,6 +25,9 @@ import {
   useTemporaryMusic,
 } from "@/components/music/music-player";
 import type { MusicTrack } from "@/features/music/library";
+import type { SongMetadata } from "@/features/music/song-metadata";
+import { SongLinkCard } from "@/components/music/song-link-card";
+import { useSongMetadata } from "@/components/music/use-song-metadata";
 import { ErrorState, SuccessState } from "@/components/ui/status-panel";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,7 +36,6 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   ImagePlusIcon,
-  MusicIcon,
   PlayIcon,
   TrashIcon,
   XIcon,
@@ -54,6 +56,7 @@ type PhotoDraft = {
   id: string;
   mimeType?: string;
   name: string;
+  placeholder?: string;
   preview?: string;
   storagePath?: string;
   width?: number;
@@ -95,13 +98,10 @@ function createInitialPhotos(
     id: photo.id || `initial-${index}`,
     mimeType: photo.mimeType,
     name: photo.alt,
+    placeholder: photo.placeholder,
     storagePath: photo.storagePath,
     width: photo.width,
   }));
-}
-
-function songProviderLabel(provider: "spotify" | "youtube") {
-  return provider === "spotify" ? "Spotify" : "YouTube Music";
 }
 
 function PhotoPreview({ photo }: { photo: PhotoDraft }) {
@@ -135,8 +135,10 @@ export function MemoryForm({
   const {
     control,
     formState: { errors, isDirty },
+    getValues,
     handleSubmit,
     register,
+    setValue,
   } = useForm<MemoryFormValues>({
     defaultValues: defaultValues ?? emptyValues,
     resolver: memoryResolver,
@@ -170,6 +172,29 @@ export function MemoryForm({
       }
     : null;
   useTemporaryMusic(previewTrack, isSongPreviewOpen);
+  const savedSongSource = defaultValues?.songUrl ? resolveSongLink(defaultValues.songUrl) : null;
+  const savedSongUrl = savedSongSource?.ok ? savedSongSource.canonicalUrl : undefined;
+  const currentSongUrl = songSource?.ok ? songSource.canonicalUrl : undefined;
+  const [songLookup, setSongLookup] = useState<{ artworkUrl: string; url: string } | null>(null);
+  // Only values we filled ourselves (or empty fields) are replaced by a lookup.
+  const autofilled = useRef({ songArtist: "", songTitle: "" });
+  const songMetadataStatus = useSongMetadata(songUrlValue, {
+    onResolved: (metadata: SongMetadata | null, resolvedUrl: string) => {
+      setSongLookup({ artworkUrl: metadata?.artworkUrl ?? "", url: resolvedUrl });
+      if (!metadata) return;
+      const fill = (field: "songArtist" | "songTitle", value: string) => {
+        const current = getValues(field).trim();
+        if (!value || (current && current !== autofilled.current[field])) return;
+        autofilled.current[field] = value;
+        setValue(field, value, { shouldDirty: true, shouldValidate: Boolean(errors[field]) });
+      };
+      fill("songTitle", metadata.title);
+      fill("songArtist", metadata.artist);
+    },
+    skipUrl: savedSongUrl,
+  });
+  const songArtworkUrl =
+    currentSongUrl && songLookup?.url === currentSongUrl ? songLookup.artworkUrl : undefined;
 
   useEffect(() => {
     const urls = previewUrls.current;
@@ -196,13 +221,21 @@ export function MemoryForm({
         formData.append(key, value);
       }
 
+      // Sent only when known for this link; otherwise the saved cover is kept
+      // (same link) or cleared by the server (different link).
+      if (songArtworkUrl !== undefined) {
+        formData.append("songArtworkUrl", songArtworkUrl);
+      }
+
       const descriptors = [];
+      let uploadBytes = 0;
 
       for (const photo of photos) {
         let processed;
 
         if (photo.file) {
           processed = await processImage(photo.file);
+          uploadBytes += processed.file.size;
           formData.append(
             `photo:${photo.id}`,
             processed.file,
@@ -220,11 +253,19 @@ export function MemoryForm({
           height: processed?.height ?? photo.height,
           id: photo.id,
           mimeType: processed?.mimeType ?? photo.mimeType,
+          placeholder: processed?.placeholder ?? photo.placeholder,
           storagePath: photo.storagePath,
           visualValue:
             processed || photo.storagePath ? undefined : photo.gradient,
           width: processed?.width ?? photo.width,
         });
+      }
+
+      if (uploadBytes > photoGuidelines.maxUploadBytesPerSave) {
+        const megabytes = (uploadBytes / (1024 * 1024)).toFixed(1).replace(".", ",");
+        throw new Error(
+          `Las fotos nuevas pesan ${megabytes} MB juntas y el máximo por guardado es 3,8 MB. Guarda con menos fotos y añade el resto editando el recuerdo.`,
+        );
       }
 
       formData.append("photoOrder", JSON.stringify(descriptors));
@@ -479,6 +520,57 @@ export function MemoryForm({
           <legend className="font-serif text-2xl font-semibold">
             Canción opcional
           </legend>
+          <Input
+            error={errors.songUrl?.message}
+            helpText="Pega una canción de Spotify o YouTube Music y completamos el resto."
+            id="songUrl"
+            inputMode="url"
+            label="Enlace musical"
+            placeholder="https://…"
+            type="url"
+            {...register("songUrl")}
+          />
+
+          {songSource ? (
+            <SongLinkCard
+              action={
+                songSource.ok ? (
+                  <button
+                    aria-label={
+                      isSongPreviewOpen
+                        ? "Cerrar vista previa"
+                        : "Probar canción"
+                    }
+                    className="inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-accent transition-[color,background-color,border-color,transform] duration-[var(--motion-fast)] hover:-translate-y-px hover:border-accent hover:bg-accent-soft/50 focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-accent active:scale-95 motion-reduce:transition-none motion-reduce:hover:transform-none"
+                    onClick={() =>
+                      setSongPreviewUrl(isSongPreviewOpen ? "" : songUrlValue)
+                    }
+                    title={
+                      isSongPreviewOpen
+                        ? "Cerrar vista previa"
+                        : "Probar canción"
+                    }
+                    type="button"
+                  >
+                    {isSongPreviewOpen ? <XIcon /> : <PlayIcon />}
+                  </button>
+                ) : null
+              }
+              artist={previewValues.songArtist ?? ""}
+              artworkUrl={songArtworkUrl || undefined}
+              footer={
+                songSource.ok && isSongPreviewOpen ? (
+                  <p className="mt-3 text-xs text-text-soft">
+                    Escucha la vista previa en el reproductor flotante.
+                  </p>
+                ) : null
+              }
+              source={songSource}
+              status={songMetadataStatus}
+              title={previewValues.songTitle ?? ""}
+            />
+          ) : null}
+
           <div className="grid gap-5 sm:grid-cols-2">
             <Input
               error={errors.songTitle?.message}
@@ -493,78 +585,6 @@ export function MemoryForm({
               {...register("songArtist")}
             />
           </div>
-          <Input
-            error={errors.songUrl?.message}
-            helpText="Spotify, YouTube Music u otro enlace completo."
-            id="songUrl"
-            inputMode="url"
-            label="Enlace musical"
-            placeholder="https://…"
-            type="url"
-            {...register("songUrl")}
-          />
-
-          {songSource ? (
-            <div
-              aria-live="polite"
-              className="rounded-[var(--radius-card)] border border-border-soft bg-surface-soft p-4"
-            >
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-surface text-olive">
-                    <MusicIcon size={18} />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold">
-                      {songSource.ok
-                        ? `${songProviderLabel(songSource.provider)} listo`
-                        : "Enlace musical"}
-                    </p>
-                    <p className="mt-1 text-xs text-text-soft">
-                      {songSource.ok
-                        ? "Puedes comprobar cómo se escuchará antes de guardar."
-                        : "Pega un enlace de una canción de Spotify o YouTube Music."}
-                    </p>
-                  </div>
-                </div>
-
-                {songSource.ok ? (
-                  <button
-                    aria-label={
-                      isSongPreviewOpen
-                        ? "Cerrar vista previa"
-                        : "Probar canción"
-                    }
-                    className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--radius-button)] border border-border bg-surface px-3 text-accent transition-[color,background-color,border-color,transform] duration-[var(--motion-fast)] hover:-translate-y-px hover:border-accent hover:bg-accent-soft/50 focus-visible:outline focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-accent motion-reduce:transition-none motion-reduce:hover:transform-none"
-                    onClick={() =>
-                      setSongPreviewUrl(isSongPreviewOpen ? "" : songUrlValue)
-                    }
-                    title={
-                      isSongPreviewOpen
-                        ? "Cerrar vista previa"
-                        : "Probar canción"
-                    }
-                    type="button"
-                  >
-                    {isSongPreviewOpen ? <XIcon /> : <PlayIcon />}
-                    <span className="sr-only">
-                      {isSongPreviewOpen
-                        ? "Cerrar vista previa"
-                        : "Probar canción"}
-                    </span>
-                  </button>
-                ) : null}
-              </div>
-
-              {songSource.ok && isSongPreviewOpen ? (
-                <div className="mt-4">
-                  <p className="text-xs text-text-soft">
-                    Escucha la vista previa en el reproductor flotante.
-                  </p>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
         </fieldset>
 
         <div className="flex flex-col gap-3 border-t border-border-soft pt-6 sm:flex-row sm:items-center">

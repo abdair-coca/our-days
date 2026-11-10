@@ -1,6 +1,8 @@
 export type MemoryPhoto = {
   id: string;
   alt: string;
+  /** Tiny data-URL preview shown while the real photo loads. */
+  placeholder?: string;
   byteSize?: number;
   gradient: string;
   height?: number;
@@ -13,6 +15,7 @@ export type MemoryPhoto = {
 export type MemorySong = {
   addedAt: string;
   addedBy: string;
+  artworkUrl?: string;
   id: string;
   title: string;
   artist: string;
