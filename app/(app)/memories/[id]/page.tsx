@@ -37,7 +37,7 @@ export default async function MemoryDetailPage({ params }: MemoryDetailPageProps
       </Link>
 
       {cover ? (
-        <div className="-mx-4 mt-4 sm:mx-0 sm:mt-6">
+        <div className="cover-drift -mx-4 mt-4 sm:mx-0 sm:mt-6">
           <MemoryGallery photos={[cover]} />
         </div>
       ) : (
@@ -86,7 +86,7 @@ export default async function MemoryDetailPage({ params }: MemoryDetailPageProps
           <h2 className="font-serif text-2xl font-semibold" id="story-title">
             La historia
           </h2>
-          <p className="mt-4 max-w-3xl whitespace-pre-line text-lg leading-8 text-text-soft">
+          <p className="drop-cap mt-4 max-w-3xl whitespace-pre-line text-lg leading-8 text-text-soft">
             {memory.description}
           </p>
         </section>
@@ -104,7 +104,9 @@ export default async function MemoryDetailPage({ params }: MemoryDetailPageProps
                 La galería
               </h2>
             </div>
-            <p className="text-sm text-text-soft">{galleryPhotos.length} fotos</p>
+            <p className="text-sm text-text-soft">
+              {galleryPhotos.length} {galleryPhotos.length === 1 ? "foto" : "fotos"}
+            </p>
           </div>
           <MemoryGallery featured={false} photos={galleryPhotos} />
         </section>

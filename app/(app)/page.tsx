@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { MemoryCard } from "@/components/memory/memory-card";
 import { MemoryPresentationOverlay } from "@/components/memory/memory-presentation";
+import { AnimatedHeadline, CountUp } from "@/components/motion/animated-headline";
 import { Reveal } from "@/components/motion/reveal";
 import { ButtonLink } from "@/components/ui/button-link";
 import { EmptyState } from "@/components/ui/status-panel";
@@ -18,6 +19,14 @@ export default async function HomePage() {
   const presentation = await getMemoryPresentation(memories);
   const [featured, ...recent] = memories;
   const todayMemory = recent[0] ?? featured;
+  const songCount = memories.reduce((total, memory) => total + memory.songs.length, 0);
+  const firstYear = memories.reduce<string | null>(
+    (oldest, memory) => {
+      const year = memory.memoryDate.slice(0, 4);
+      return !oldest || year < oldest ? year : oldest;
+    },
+    null,
+  );
 
   return (
     <>
@@ -32,12 +41,12 @@ export default async function HomePage() {
             <p className="text-xs font-bold tracking-[0.2em] text-accent-hover uppercase">
               Nuestro álbum vivo
             </p>
-            <h1
-              className="mt-3 max-w-xl text-balance font-serif text-5xl leading-[1.02] font-semibold sm:text-6xl"
+            <AnimatedHeadline
+              className="mt-3 max-w-xl text-balance font-serif text-[2.6rem] leading-[1.04] font-semibold tracking-[-0.015em] sm:text-6xl"
+              highlight="quedarse."
               id="home-title"
-            >
-              Los días pequeños también merecen quedarse.
-            </h1>
+              text="Los días pequeños también merecen quedarse."
+            />
             <p className="mt-5 max-w-lg text-lg leading-8 text-text-soft">
               Un espacio tranquilo para volver a las historias, las fotos y las canciones que son nuestras.
             </p>
@@ -47,45 +56,69 @@ export default async function HomePage() {
                 Ver la línea de tiempo
               </ButtonLink>
             </div>
+            {memories.length > 0 ? (
+              <dl className="mt-8 flex flex-wrap gap-x-7 gap-y-3 border-t border-border-soft pt-5">
+                <div>
+                  <dt className="text-[11px] font-bold tracking-[0.16em] text-text-soft uppercase">Recuerdos</dt>
+                  <dd className="font-serif text-3xl font-semibold"><CountUp value={memories.length} /></dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-bold tracking-[0.16em] text-text-soft uppercase">Canciones</dt>
+                  <dd className="font-serif text-3xl font-semibold"><CountUp value={songCount} /></dd>
+                </div>
+                {firstYear ? (
+                  <div>
+                    <dt className="text-[11px] font-bold tracking-[0.16em] text-text-soft uppercase">Desde</dt>
+                    <dd className="font-serif text-3xl font-semibold tabular-nums">{firstYear}</dd>
+                  </div>
+                ) : null}
+              </dl>
+            ) : null}
           </div>
 
           {featured ? (
             <Link
-              className="group mt-8 block overflow-hidden rounded-[var(--radius-card)] focus-visible:outline-offset-4 lg:mt-0"
+              className="group mt-10 block rounded-[6px] focus-visible:outline-offset-8 lg:mt-0"
               href={`/memories/${featured.id}`}
             >
-              <div
-                aria-label={featured.photos[0]?.src ? undefined : featured.photos[0]?.alt}
-                className="aspect-[4/3] overflow-hidden rounded-[var(--radius-card)] bg-cover bg-center transition duration-[var(--motion-normal)] group-hover:scale-[1.015]"
-                role={featured.photos[0]?.src ? undefined : "img"}
-                style={{
-                  backgroundImage: featured.photos[0]?.src
-                    ? undefined
-                    : featured.photos[0]?.gradient,
-                }}
-              >
-                {featured.photos[0]?.src ? (
-                  <img
-                    alt={featured.photos[0].alt}
-                    className="size-full object-cover"
-                    decoding="async"
-                    loading="eager"
-                    src={featured.photos[0].src}
-                  />
-                ) : null}
-              </div>
-              <div className="mt-4 flex items-end justify-between gap-4">
-                <div>
-                  <p className="text-xs font-bold tracking-[0.14em] text-accent-hover uppercase">
-                    Recuerdo destacado
-                  </p>
-                  <h2 className="mt-1 font-serif text-2xl font-semibold">
-                    {featured.title}
-                  </h2>
+              <div className="polaroid">
+                <span aria-hidden="true" className="tape" />
+                <div
+                  aria-label={featured.photos[0]?.src ? undefined : featured.photos[0]?.alt}
+                  className="aspect-[4/3] overflow-hidden rounded-[3px] bg-cover bg-center"
+                  role={featured.photos[0]?.src ? undefined : "img"}
+                  style={{
+                    backgroundImage: featured.photos[0]?.src
+                      ? undefined
+                      : featured.photos[0]?.gradient,
+                  }}
+                >
+                  {featured.photos[0]?.src ? (
+                    <img
+                      alt={featured.photos[0].alt}
+                      className="size-full object-cover transition-transform duration-[var(--motion-emotional)] ease-[var(--ease-gentle)] group-hover:scale-[1.02] motion-reduce:transition-none"
+                      decoding="async"
+                      loading="eager"
+                      src={featured.photos[0].src}
+                    />
+                  ) : null}
                 </div>
-                <time className="shrink-0 text-sm text-text-soft" dateTime={featured.memoryDate}>
-                  {formatMemoryDate(featured.memoryDate)}
-                </time>
+                <div className="mt-4 flex flex-wrap items-end justify-between gap-x-4 gap-y-1 px-1">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold tracking-[0.14em] text-accent-hover uppercase">
+                      Recuerdo destacado
+                    </p>
+                    <h2 className="mt-1 font-serif text-2xl font-semibold">
+                      {featured.title}
+                    </h2>
+                  </div>
+                  <time
+                    className="text-handwritten shrink-0 -rotate-2 text-2xl leading-none text-accent-hover"
+                    dateTime={featured.memoryDate}
+                  >
+                    {formatMemoryDate(featured.memoryDate)}
+                  </time>
+                </div>
               </div>
             </Link>
           ) : (

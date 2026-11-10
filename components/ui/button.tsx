@@ -6,7 +6,7 @@ export type ButtonVariant = "primary" | "secondary" | "ghost" | "quiet";
 
 const buttonVariants: Record<ButtonVariant, string> = {
   primary:
-    "border border-transparent bg-[var(--accent)] text-white shadow-[var(--shadow-card)] hover:bg-[var(--accent-hover)] active:scale-[0.98]",
+    "button-shine border border-transparent bg-[var(--accent)] text-white shadow-[var(--shadow-card)] hover:bg-[var(--accent-hover)] hover:shadow-[0_10px_24px_rgb(158_75_61/0.28)] active:scale-[0.98]",
   secondary:
     "border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:border-[var(--accent-soft)] hover:bg-[var(--surface-soft)] active:scale-[0.98]",
   ghost:

@@ -9,6 +9,9 @@ import { useState } from "react";
 import Link from "next/link";
 
 import { cardHover, imageHover } from "@/components/motion/variants";
+import { useMusicPlayer } from "@/components/music/music-player";
+import { Equalizer } from "@/components/music/track-visuals";
+import { ArrowLeftIcon, ImagesIcon, MusicIcon } from "@/components/ui/icons";
 import { formatMemoryDate } from "@/lib/utils/format-memory-date";
 import type { Memory } from "@/types/memory";
 
@@ -24,6 +27,9 @@ export function MemoryCard({ memory, priority = false }: MemoryCardProps) {
   const [imageState, setImageState] = useState<"ready" | "refreshing" | "failed">(
     "ready",
   );
+  const { state: music } = useMusicPlayer();
+  const songPlaying = music.status === "playing" && music.track?.memoryId === memory.id;
+  const songCount = memory.songs.length;
 
   function handleImageError() {
     if (imageState === "ready") {
@@ -38,6 +44,12 @@ export function MemoryCard({ memory, priority = false }: MemoryCardProps) {
   return (
     <motion.article
       className="group h-full overflow-hidden rounded-3xl border border-ink/8 bg-card shadow-sm"
+      onPointerMove={(event) => {
+        if (shouldReduceMotion || event.pointerType !== "mouse") return;
+        const bounds = event.currentTarget.getBoundingClientRect();
+        event.currentTarget.style.setProperty("--mx", `${event.clientX - bounds.left}px`);
+        event.currentTarget.style.setProperty("--my", `${event.clientY - bounds.top}px`);
+      }}
       initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
       transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
       variants={cardHover}
@@ -60,7 +72,7 @@ export function MemoryCard({ memory, priority = false }: MemoryCardProps) {
                 ? undefined
                 : cover?.alt ?? "Recuerdo sin imagen"
           }
-          className="aspect-[4/3] w-full overflow-hidden bg-[#eadfd7]"
+          className="relative aspect-[4/3] w-full overflow-hidden bg-[#eadfd7]"
           role={cover?.src && imageState !== "failed" ? undefined : "img"}
           style={{
             backgroundImage:
@@ -83,6 +95,25 @@ export function MemoryCard({ memory, priority = false }: MemoryCardProps) {
               <span className="text-sm font-semibold text-text">Imagen no disponible</span>
             </div>
           ) : null}
+          <span aria-hidden="true" className="memory-card-light" />
+          {memory.photos.length > 1 || songCount > 0 ? (
+            <span className="absolute top-3 left-3 flex gap-1.5">
+              {memory.photos.length > 1 ? (
+                <span className="memory-chip">
+                  <ImagesIcon aria-hidden="true" size={13} />
+                  {memory.photos.length}
+                  <span className="sr-only"> fotos</span>
+                </span>
+              ) : null}
+              {songCount > 0 ? (
+                <span className="memory-chip" data-playing={songPlaying}>
+                  {songPlaying ? <Equalizer active /> : <MusicIcon aria-hidden="true" size={13} />}
+                  {songPlaying ? "Sonando" : songCount}
+                  <span className="sr-only">{songPlaying ? "" : songCount === 1 ? " canción" : " canciones"}</span>
+                </span>
+              ) : null}
+            </span>
+          ) : null}
         </motion.div>
         <div className="p-5">
           <time
@@ -91,8 +122,13 @@ export function MemoryCard({ memory, priority = false }: MemoryCardProps) {
           >
             {formatMemoryDate(memory.memoryDate)}
           </time>
-          <h2 className="mt-2 font-serif text-2xl leading-tight font-semibold">
-            {memory.title}
+          <h2 className="mt-2 flex items-start justify-between gap-3 font-serif text-2xl leading-tight font-semibold">
+            <span className="min-w-0">{memory.title}</span>
+            <ArrowLeftIcon
+              aria-hidden="true"
+              className="mt-1.5 shrink-0 rotate-180 text-accent opacity-0 transition-[opacity,transform] duration-[var(--motion-fast)] ease-[var(--ease-gentle)] group-hover:translate-x-1 group-hover:opacity-100 group-focus-within:opacity-100 motion-reduce:transition-none"
+              size={18}
+            />
           </h2>
           <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted">
             {memory.description}

@@ -73,8 +73,8 @@ export function SiteNavigation({ variant }: SiteNavigationProps) {
                 aria-current={isCurrent ? "page" : undefined}
                 aria-label={item.label}
                 className={classNames(
-                  "relative flex min-h-11 min-w-11 items-center justify-center overflow-hidden rounded-button px-2 py-2 text-center text-xs font-semibold transition sm:text-sm",
-                  !isMobile && "px-3",
+                  "relative flex min-h-11 min-w-11 items-center justify-center overflow-hidden rounded-button px-2 py-2 text-center text-xs font-semibold transition-[color,background-color] duration-[var(--motion-fast)] sm:text-sm",
+                  !isMobile && "px-3 lg:px-3.5",
                   isCurrent
                     ? "text-white"
                     : isCreate && isMobile
@@ -91,10 +91,17 @@ export function SiteNavigation({ variant }: SiteNavigationProps) {
                     transition={{ type: "spring", stiffness: 430, damping: 34, mass: 0.72 }}
                   />
                 ) : null}
-                <span className="relative z-10">
+                <span className="nav-icon relative z-10">
                   <Icon aria-hidden="true" size={isMobile ? 22 : 20} />
                 </span>
-                <span className="sr-only">{item.label}</span>
+                <span
+                  className={classNames(
+                    "relative z-10",
+                    isMobile ? "sr-only" : "sr-only lg:not-sr-only lg:ml-2",
+                  )}
+                >
+                  {item.label}
+                </span>
               </Link>
             </li>
           );
