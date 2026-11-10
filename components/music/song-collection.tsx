@@ -113,7 +113,7 @@ export function SongCollection({ memoryId, songs }: SongCollectionProps) {
       </div>
 
       {songs.length > 0 ? (
-        <div className="grid gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
           <AnimatePresence initial={false} mode="popLayout">
             {songs.map((song) => (
               <motion.div
@@ -134,6 +134,7 @@ export function SongCollection({ memoryId, songs }: SongCollectionProps) {
               >
                 <SongCard
                   isActive={musicState.track?.key === `${memoryId}:${song.id}`}
+                  isPlaying={musicState.status === "playing"}
                   onDelete={
                     pendingSongId ? undefined : () => handleDelete(song)
                   }
@@ -145,7 +146,12 @@ export function SongCollection({ memoryId, songs }: SongCollectionProps) {
                           setDialog({ mode: "edit", song });
                         }
                   }
-                  onPlay={() => controller.select(`${memoryId}:${song.id}`)}
+                  onPlay={() => {
+                    const key = `${memoryId}:${song.id}`;
+                    // The active song pauses/resumes instead of restarting.
+                    if (musicState.track?.key === key) controller.toggle();
+                    else controller.select(key);
+                  }}
                   song={song}
                 />
               </motion.div>

@@ -43,6 +43,8 @@ La aplicación tiene una base verificable de performance y resiliencia. Este doc
 - [ ] Vistas previas e Historias: comenzar toma la sesión musical; cerrar/finalizar restaura canción, posición y pausa previa. Pausa explícita detiene música e imágenes; pulsación larga solo imágenes.
 - [ ] Biblioteca: editar título conserva reproducción; cambiar URL carga en pausa; eliminar la canción activa detiene. Salir de sesión o cambiar de usuario/espacio vacía música y sesiones temporales.
 - [ ] Proveedores: confirmar eventos reales, Reanudar ante bloqueo y controles nativos de Spotify ante restricciones; comprobar Tab/Escape y controles accesibles en formularios e Historias.
+- [ ] Reproductor: el vinilo solo gira con reproducción confirmada; ±10 s y volumen aparecen solo con YouTube (volumen oculto en pantallas táctiles); Espacio/K, ←/J y →/L funcionan con los controles abiertos sin robar teclas a campos o deslizadores; arrastrar la hoja móvil hacia abajo la cierra y un arrastre corto la devuelve a su sitio; pulsar la canción activa en la biblioteca o en su tarjeta pausa/reanuda sin reiniciarla.
+- [ ] `prefers-reduced-motion`: sin giro de vinilo, ecualizador, marquesina, brillo de botones ni shimmer de skeletons.
 - [ ] Lighthouse móvil y escritorio: revisar LCP, CLS, INP y peso inicial.
 
 ## Fuera de esta fase

@@ -1,19 +1,55 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import {
+  useDeferredValue,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { mountProvider } from "@/features/music/provider-adapters";
-import { Button } from "@/components/ui/button";
-import { MusicIcon, PauseIcon, PlayIcon, XIcon } from "@/components/ui/icons";
+import { isPlaybackActive, type PlaybackStatus } from "@/features/music/player-controller";
+import {
+  ExternalLinkIcon,
+  ListMusicIcon,
+  SearchIcon,
+  SeekIcon,
+  SkipBackIcon,
+  SkipForwardIcon,
+  VideoIcon,
+  VolumeIcon,
+  XIcon,
+} from "@/components/ui/icons";
 import { useMusicPlayer } from "./music-player";
+import {
+  Equalizer,
+  MarqueeText,
+  PlayPauseGlyph,
+  ProgressRing,
+  TrackCover,
+  Vinyl,
+  trackPalette,
+} from "./track-visuals";
 
-const statusLabels = {
+const statusLabels: Record<PlaybackStatus, string> = {
   idle: "Elige una canción", loading: "Cargando…", playing: "Reproduciendo",
   paused: "En pausa", ended: "Finalizada", blocked: "Pulsa Reproducir", error: "No disponible",
 };
 function time(seconds: number) {
-  const value = Math.floor(seconds || 0);
+  const value = Math.max(0, Math.floor(seconds || 0));
   return `${Math.floor(value / 60)}:${String(value % 60).padStart(2, "0")}`;
+}
+function normalize(value: string) {
+  return value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+}
+/** Keys a focused control already owns: text entry, sliders and embeds take
+ *  everything; buttons and links additionally own Space and Enter. */
+function ownsKey(target: EventTarget | null, key: string) {
+  if (!(target instanceof Element)) return false;
+  if (target.closest("input, textarea, select, iframe, [contenteditable='true']")) return true;
+  return key === " " && Boolean(target.closest("button, a[href]"));
 }
 
 export function FloatingMusicPlayer({ visible, libraryError }: { visible: boolean; libraryError: string }) {
@@ -23,13 +59,31 @@ export function FloatingMusicPlayer({ visible, libraryError }: { visible: boolea
   const host = useRef<HTMLDivElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
   const titleButton = useRef<HTMLButtonElement>(null);
+  const scrubValue = useRef<number | null>(null);
+  const [scrub, setScrub] = useState<number | null>(null);
+  const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
   const track = state.track;
   const youtube = track?.source.provider === "youtube";
   const expanded = visible && state.expanded;
   const videoShown = Boolean(youtube && state.videoVisible);
   const index = state.tracks.findIndex((item) => item.key === track?.key);
   const playing = state.status === "playing";
+  const active = isPlaybackActive(state);
   const artist = track?.artist || (youtube ? "YouTube" : "Spotify");
+  const providerName = youtube ? "YouTube" : "Spotify";
+  const canSeek = Boolean(youtube && state.duration > 0);
+  const queueLocked = Boolean(state.owner);
+  const hasPrevious = !queueLocked && index > 0;
+  const hasNext = !queueLocked && index >= 0 && index < state.tracks.length - 1;
+  const upNext = hasNext ? state.tracks[index + 1] : null;
+  const shownPosition = scrub ?? Math.min(state.position, state.duration || 0);
+  const progress = state.duration > 0 ? shownPosition / state.duration : 0;
+  const effectiveVolume = state.muted ? 0 : state.volume;
+  const filter = normalize(deferredQuery.trim());
+  const visibleTracks = filter
+    ? state.tracks.filter((item) => normalize(`${item.title} ${item.artist} ${item.memoryTitle}`).includes(filter))
+    : state.tracks;
 
   // One DOM location: opening controls or navigating never remounts the host.
   useEffect(() => {
@@ -80,6 +134,17 @@ export function FloatingMusicPlayer({ visible, libraryError }: { visible: boolea
           event.preventDefault();
           first.focus();
         }
+      } else if (!event.metaKey && !event.ctrlKey && !event.altKey && !ownsKey(event.target, event.key)) {
+        // Media shortcuts only when focus is not on a control that owns the key.
+        const current = controller.getSnapshot();
+        const key = event.key.toLowerCase();
+        const seekable = current.track?.source.provider === "youtube" && current.duration > 0;
+        if (current.track && (key === " " || key === "k")) controller.toggle();
+        else if (seekable && (key === "arrowleft" || key === "j")) controller.skip(-10);
+        else if (seekable && (key === "arrowright" || key === "l")) controller.skip(10);
+        else return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
       }
     }
     function keepFocus(event: FocusEvent) {
@@ -97,15 +162,64 @@ export function FloatingMusicPlayer({ visible, libraryError }: { visible: boolea
     };
   }, [controller, expanded]);
 
-  function togglePlayback() {
-    if (playing) controller.pause();
-    else controller.play();
-  }
-
   function hideVideo() {
     controller.hideVideo();
     if (!expanded) titleButton.current?.focus();
   }
+
+  function updateScrub(value: number) {
+    scrubValue.current = value;
+    setScrub(value);
+  }
+  function commitScrub() {
+    if (scrubValue.current === null) return;
+    controller.seek(scrubValue.current);
+    scrubValue.current = null;
+    setScrub(null);
+  }
+
+  /** Mobile sheet: drag the grabber down to dismiss, release early to settle back. */
+  function startSheetDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    const sheet = panel.current;
+    if (!sheet || event.button !== 0 || window.matchMedia("(min-width: 768px)").matches) return;
+    const grabber = event.currentTarget;
+    const startY = event.clientY;
+    const startedAt = performance.now();
+    let distance = 0;
+    grabber.setPointerCapture(event.pointerId);
+    sheet.style.transition = "none";
+    sheet.style.animation = "none";
+    const move = (moveEvent: PointerEvent) => {
+      const delta = moveEvent.clientY - startY;
+      distance = delta > 0 ? delta : delta / 6;
+      sheet.style.transform = `translateY(${distance}px)`;
+    };
+    const end = () => {
+      grabber.removeEventListener("pointermove", move);
+      grabber.removeEventListener("pointerup", end);
+      grabber.removeEventListener("pointercancel", end);
+      const velocity = distance / Math.max(1, performance.now() - startedAt);
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      sheet.style.transition = reduce ? "none" : "transform 220ms var(--ease-gentle)";
+      const dismiss = distance > 110 || velocity > 0.7;
+      sheet.style.transform = dismiss ? "translateY(105%)" : "";
+      window.setTimeout(() => {
+        sheet.style.transition = "";
+        sheet.style.transform = "";
+        sheet.style.animation = "";
+        if (dismiss) controller.closeLibrary();
+      }, reduce ? 0 : 200);
+    };
+    grabber.addEventListener("pointermove", move);
+    grabber.addEventListener("pointerup", end);
+    grabber.addEventListener("pointercancel", end);
+  }
+
+  const capsuleHint =
+    state.status === "blocked" ? "Toca reproducir para continuar"
+      : state.status === "error" ? "No disponible · abre los controles"
+        : state.status === "loading" && state.wantsPlay ? "Cargando…"
+          : artist;
 
   return (
     <section
@@ -115,8 +229,7 @@ export function FloatingMusicPlayer({ visible, libraryError }: { visible: boolea
       id="global-music-player"
       ref={root}
     >
-      <div className="music-capsule" hidden={!track || expanded}>
-        <span className="music-player-symbol"><MusicIcon size={18} /></span>
+      <div className="music-capsule" data-status={state.status} hidden={!track || expanded} style={trackPalette(track)}>
         <button
           aria-controls="music-controls-dialog"
           aria-expanded={expanded}
@@ -127,12 +240,35 @@ export function FloatingMusicPlayer({ visible, libraryError }: { visible: boolea
           ref={titleButton}
           type="button"
         >
-          <strong>{track?.title || "Sin título"}</strong><span>{artist}</span>
+          <span className="music-capsule-art" key={track?.key}>
+            <ProgressRing progress={progress} size={46} />
+            <Vinyl size={36} spinning={playing} track={track} />
+          </span>
+          <span className="music-capsule-text">
+            <MarqueeText className="music-capsule-name" run={playing}>{track?.title || "Sin título"}</MarqueeText>
+            <span className="music-capsule-sub">
+              {playing ? <Equalizer active /> : null}
+              <span>{capsuleHint}</span>
+            </span>
+          </span>
         </button>
-        <Button aria-label={playing ? "Pausar música" : "Reproducir música"} className="p-2" onClick={togglePlayback} variant="secondary">
-          {playing ? <PauseIcon size={18} /> : <PlayIcon size={18} />}
-        </Button>
-        <Button aria-label="Cerrar reproductor y detener música" className="p-2" onClick={controller.stop} variant="quiet"><XIcon size={18} /></Button>
+        <button
+          aria-label={active ? "Pausar música" : "Reproducir música"}
+          className="music-round-button music-capsule-play"
+          data-attention={state.status === "blocked" || undefined}
+          onClick={controller.toggle}
+          type="button"
+        >
+          <PlayPauseGlyph playing={active} size={18} />
+        </button>
+        {hasNext ? (
+          <button aria-label="Siguiente canción" className="music-icon-button music-capsule-next" onClick={() => controller.next()} type="button">
+            <SkipForwardIcon size={18} />
+          </button>
+        ) : null}
+        <button aria-label="Cerrar reproductor y detener música" className="music-icon-button" onClick={controller.stop} type="button">
+          <XIcon size={18} />
+        </button>
       </div>
 
       {expanded ? <div aria-hidden="true" className="music-dialog-backdrop" onClick={controller.closeLibrary} /> : null}
@@ -142,82 +278,198 @@ export function FloatingMusicPlayer({ visible, libraryError }: { visible: boolea
         aria-labelledby={expanded ? "music-controls-title" : undefined}
         aria-modal={expanded ? true : undefined}
         className={`music-controls-panel ${expanded ? "music-dialog-is-open" : videoShown ? "music-video-dock" : "music-controls-collapsed"}`}
+        data-playing={playing}
         hidden={!expanded && !youtube}
         id="music-controls-dialog"
         ref={panel}
         role={expanded ? "dialog" : undefined}
+        style={trackPalette(track)}
         tabIndex={expanded ? -1 : undefined}
       >
-        <div className="music-modal-heading" hidden={!expanded}>
-          <div className="min-w-0">
-            <p className="text-xs font-bold tracking-[0.14em] text-olive uppercase">
+        <div aria-hidden="true" className="music-sheet-grabber" hidden={!expanded} onPointerDown={startSheetDrag}>
+          <span />
+        </div>
+
+        <div className="music-now">
+          <div className="music-modal-heading" hidden={!expanded}>
+            <p className="music-eyebrow">
+              <span className="music-eyebrow-dot" data-active={active} />
               {state.owner === "story" ? "Música de la presentación" : state.owner === "preview" ? "Vista previa" : "Nuestra música"}
             </p>
-            <h2 className="mt-2 font-serif text-3xl font-semibold" id="music-controls-title">{track?.title || "La banda sonora de sus días"}</h2>
-            <p className="mt-1 text-sm text-text-soft">{track ? artist : "Canciones guardadas en sus recuerdos"}</p>
+            <button aria-label="Cerrar controles y conservar música" className="music-icon-button" onClick={controller.closeLibrary} ref={closeButton} type="button">
+              <XIcon size={20} />
+            </button>
           </div>
-          <Button aria-label="Cerrar controles y conservar música" className="shrink-0 p-2" onClick={controller.closeLibrary} ref={closeButton} variant="quiet"><XIcon size={20} /></Button>
-        </div>
 
-        {track ? (
-          <div className="music-track-meta" hidden={!expanded}>
-            <span>{youtube ? "YouTube" : "Spotify"}</span>
-            {state.owner !== "preview" ? <Link href={`/memories/${track.memoryId}`} onClick={controller.closeLibrary}>Ver recuerdo: {track.memoryTitle}</Link> : null}
+          <div className="music-deck" data-active={active} data-compact={Boolean(track && !youtube)} hidden={!expanded || videoShown}>
+            <span aria-hidden="true" className="music-deck-glow" />
+            <span className="music-deck-record"><Vinyl size={176} spinning={playing} track={track} /></span>
+            <span className="music-deck-sleeve" key={track?.key ?? "empty"}><TrackCover size={184} track={track} /></span>
           </div>
-        ) : null}
 
-        <div className="music-video-actions" hidden={!youtube || (!expanded && !videoShown)}>
-          {videoShown ? <Button className="px-3" onClick={hideVideo} variant="quiet">Ocultar vídeo</Button> : <Button onClick={controller.showVideo} variant="secondary"><PlayIcon size={16} />Ver vídeo</Button>}
-          {!expanded && videoShown ? <button className="music-text-button" onClick={controller.openLibrary} type="button">Controles</button> : null}
-        </div>
-        <div aria-hidden={youtube && !videoShown} className={`music-media-host ${!youtube ? "music-media-spotify" : videoShown ? "" : "music-video-hidden"}`} hidden={!track || (!youtube && !expanded)} inert={youtube && !videoShown} ref={host} />
-
-        <div className="music-modal-controls" hidden={!expanded || !track}>
-          <div className="music-player-controls">
-            <Button aria-label="Canción anterior" disabled={Boolean(state.owner) || index <= 0} onClick={() => controller.next(-1)} variant="quiet">‹</Button>
-            <Button onClick={togglePlayback} variant="secondary">
-              {playing ? <PauseIcon size={18} /> : <PlayIcon size={18} />}{playing ? "Pausar" : "Reproducir"}
-            </Button>
-            <Button aria-label="Siguiente canción" disabled={Boolean(state.owner) || index < 0 || index >= state.tracks.length - 1} onClick={() => controller.next()} variant="quiet">›</Button>
-          </div>
-          <p aria-live="polite" className="music-playback-status" id="music-playback-status">{statusLabels[state.status]}</p>
-          {state.duration > 0 ? (
-            youtube ? (
-              <label className="music-seek">
-                <span className="sr-only">Posición de reproducción</span>
-                <input aria-label="Posición de reproducción" aria-valuetext={`${time(state.position)} de ${time(state.duration)}`} max={state.duration} min={0} onChange={(event) => controller.seek(Number(event.target.value))} step={1} type="range" value={Math.min(state.position, state.duration)} />
-                <span>{time(state.position)} / {time(state.duration)}</span>
-              </label>
+          <div className="music-video-actions" hidden={!youtube || (!expanded && !videoShown)}>
+            {videoShown ? (
+              <button className="music-chip-button" onClick={hideVideo} type="button"><Vinyl size={18} spinning={false} track={track} />Ocultar vídeo</button>
             ) : (
-              <div className="music-progress"><progress aria-label="Progreso de reproducción" max={state.duration} value={Math.min(state.position, state.duration)} /><span>{time(state.position)} / {time(state.duration)}</span></div>
-            )
-          ) : <p className="music-time">El progreso aparecerá cuando el proveedor lo comparta.</p>}
-          {youtube ? <p className="music-message text-text-soft">Ver vídeo amplía el reproductor. Ocultarlo o cerrar estos controles conserva la reproducción.</p> : null}
-          {state.message ? <p aria-live="polite" className="music-message">{state.message}</p> : null}
-          {track ? (
-            <div className="music-provider-link">
-              {state.status === "error" ? <button onClick={controller.retry} type="button">Reintentar</button> : null}
-              <a href={track.source.canonicalUrl} rel="noreferrer" target="_blank">Abrir en {youtube ? "YouTube" : "Spotify"}</a>
+              <button className="music-chip-button" onClick={controller.showVideo} type="button"><VideoIcon size={16} />Ver vídeo</button>
+            )}
+            {!expanded && videoShown ? <button className="music-text-button" onClick={controller.openLibrary} type="button">Controles</button> : null}
+          </div>
+          <div aria-hidden={youtube && !videoShown} className={`music-media-host ${!youtube ? "music-media-spotify" : videoShown ? "" : "music-video-hidden"}`} hidden={!track || (!youtube && !expanded)} inert={youtube && !videoShown} ref={host} />
+
+          <div className="music-track-info" hidden={!expanded}>
+            <h2 id="music-controls-title">{track?.title || "La banda sonora de sus días"}</h2>
+            <p className="music-track-artist">{track ? artist : "Canciones guardadas en sus recuerdos"}</p>
+            {track ? (
+              <p className="music-track-meta">
+                <span className="music-provider-chip" data-provider={track.source.provider}>{providerName}</span>
+                {state.owner !== "preview" ? (
+                  <Link href={`/memories/${track.memoryId}`} onClick={controller.closeLibrary}>
+                    De «{track.memoryTitle}»
+                  </Link>
+                ) : null}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="music-modal-controls" hidden={!expanded || !track}>
+            {state.duration > 0 ? (
+              <div className="music-scrubber" style={{ "--progress": `${progress * 100}%`, "--progress-ratio": progress } as CSSProperties}>
+                {youtube ? (
+                  <input
+                    aria-label="Posición de reproducción"
+                    aria-valuetext={`${time(shownPosition)} de ${time(state.duration)}`}
+                    max={state.duration}
+                    min={0}
+                    onBlur={commitScrub}
+                    onChange={(event) => updateScrub(Number(event.target.value))}
+                    onKeyUp={commitScrub}
+                    onPointerUp={commitScrub}
+                    step={1}
+                    type="range"
+                    value={shownPosition}
+                  />
+                ) : (
+                  <span aria-label="Progreso de reproducción" aria-valuemax={Math.round(state.duration)} aria-valuemin={0} aria-valuenow={Math.round(shownPosition)} aria-valuetext={`${time(shownPosition)} de ${time(state.duration)}`} className="music-scrubber-static" role="progressbar" />
+                )}
+                <span className="music-scrubber-times">
+                  <span>{time(shownPosition)}</span>
+                  <span>-{time(state.duration - shownPosition)}</span>
+                </span>
+              </div>
+            ) : (
+              <div className="music-scrubber music-scrubber-pending">
+                <span className="music-scrubber-static" />
+                <span className="music-scrubber-times"><span>El progreso aparecerá cuando el proveedor lo comparta.</span></span>
+              </div>
+            )}
+
+            <div className="music-player-controls">
+              {youtube ? (
+                <button aria-label="Retroceder 10 segundos" className="music-icon-button" disabled={!canSeek} onClick={() => controller.skip(-10)} type="button">
+                  <SeekIcon direction={-1} size={22} />
+                </button>
+              ) : null}
+              <button aria-label="Canción anterior" className="music-icon-button" disabled={!hasPrevious} onClick={() => controller.next(-1)} type="button">
+                <SkipBackIcon size={22} />
+              </button>
+              <button
+                aria-label={active ? "Pausar" : "Reproducir"}
+                className="music-round-button music-main-play"
+                data-attention={state.status === "blocked" || undefined}
+                data-loading={(state.status === "loading" && state.wantsPlay) || undefined}
+                onClick={controller.toggle}
+                type="button"
+              >
+                <PlayPauseGlyph playing={active} size={28} />
+              </button>
+              <button aria-label="Siguiente canción" className="music-icon-button" disabled={!hasNext} onClick={() => controller.next()} type="button">
+                <SkipForwardIcon size={22} />
+              </button>
+              {youtube ? (
+                <button aria-label="Avanzar 10 segundos" className="music-icon-button" disabled={!canSeek} onClick={() => controller.skip(10)} type="button">
+                  <SeekIcon size={22} />
+                </button>
+              ) : null}
             </div>
-          ) : null}
+
+            <div className="music-status-row">
+              <p aria-live="polite" className="music-playback-status" data-status={state.status} id="music-playback-status">
+                {playing ? <Equalizer active /> : <span className="music-status-dot" />}
+                {statusLabels[state.status]}
+              </p>
+              {youtube ? (
+                <div className="music-volume" style={{ "--volume": `${effectiveVolume * 100}%` } as CSSProperties}>
+                  <button aria-label={state.muted || effectiveVolume === 0 ? "Activar sonido" : "Silenciar"} className="music-icon-button" onClick={controller.toggleMute} type="button">
+                    <VolumeIcon level={effectiveVolume} size={18} />
+                  </button>
+                  <input aria-label="Volumen" max={1} min={0} onChange={(event) => controller.setVolume(Number(event.target.value))} step={0.05} type="range" value={effectiveVolume} />
+                </div>
+              ) : null}
+            </div>
+
+            {upNext ? (
+              <p className="music-up-next"><span>A continuación</span> {upNext.title || "Sin título"}</p>
+            ) : null}
+            {state.message ? <p aria-live="polite" className="music-message">{state.message}</p> : null}
+            {youtube ? <p className="music-message music-hint">Ver vídeo amplía el reproductor; ocultarlo o cerrar estos controles conserva la música.<span className="music-shortcuts"> Atajos: Espacio, ← y →.</span></p> : null}
+            {track ? (
+              <div className="music-provider-link">
+                {state.status === "error" ? <button className="music-chip-button" onClick={controller.retry} type="button">Reintentar</button> : null}
+                <a href={track.source.canonicalUrl} rel="noreferrer" target="_blank">
+                  Abrir en {providerName}<ExternalLinkIcon size={14} />
+                </a>
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <div className="music-library" hidden={!expanded}>
-          <h3 className="font-serif text-xl font-semibold">Biblioteca</h3>
-          {state.owner ? <p className="mt-2 text-sm text-text-soft">La biblioteca volverá a estar disponible al cerrar {state.owner === "story" ? "la presentación" : "la vista previa"}.</p> : null}
-          {libraryError ? <p role="status">{libraryError} <button className="music-text-button" onClick={() => void refresh()} type="button">Reintentar</button></p> : null}
+          <div className="music-library-heading">
+            <h3><ListMusicIcon size={18} />Biblioteca</h3>
+            {state.tracks.length ? <span>{state.tracks.length} {state.tracks.length === 1 ? "canción" : "canciones"}</span> : null}
+          </div>
+          {state.owner ? <p className="music-library-note">La biblioteca volverá a estar disponible al cerrar {state.owner === "story" ? "la presentación" : "la vista previa"}.</p> : null}
+          {libraryError ? <p className="music-library-note" role="status">{libraryError} <button className="music-text-button" onClick={() => void refresh()} type="button">Reintentar</button></p> : null}
+          {state.tracks.length > 5 ? (
+            <label className="music-library-search">
+              <SearchIcon size={16} />
+              <span className="sr-only">Buscar en la biblioteca</span>
+              <input onChange={(event) => setQuery(event.target.value)} placeholder="Buscar canción o recuerdo" type="search" value={query} />
+            </label>
+          ) : null}
           {state.tracks.length ? (
-            <ol aria-label="Canciones de nuestros recuerdos">
-              {state.tracks.map((item) => (
-                <li key={item.key}>
-                  <button aria-current={item.key === track?.key ? "true" : undefined} disabled={Boolean(state.owner)} onClick={() => controller.select(item.key)} type="button">
-                    {item.key === track?.key ? <MusicIcon size={18} /> : <PlayIcon size={18} />}
-                    <span><strong>{item.title || "Sin título"}</strong><small>{item.artist || (item.source.provider === "youtube" ? "YouTube" : "Spotify")} · {item.memoryTitle}</small></span>
-                  </button>
-                </li>
-              ))}
-            </ol>
-          ) : <p className="mt-2 text-sm text-text-soft">Aún no hay canciones compatibles. Añade un enlace de Spotify o YouTube a un recuerdo.</p>}
+            visibleTracks.length ? (
+              <ol aria-label="Canciones de nuestros recuerdos">
+                {visibleTracks.map((item, position) => {
+                  const current = item.key === track?.key;
+                  const number = state.tracks.indexOf(item) + 1;
+                  return (
+                    <li key={item.key} style={{ "--i": Math.min(position, 10) } as CSSProperties}>
+                      <button
+                        aria-current={current ? "true" : undefined}
+                        aria-label={current ? `${item.title || "Sin título"}: ${active ? "pausar" : "reproducir"}` : undefined}
+                        disabled={queueLocked}
+                        onClick={() => (current ? controller.toggle() : controller.select(item.key))}
+                        type="button"
+                      >
+                        <span className="music-library-index">
+                          {current ? <Equalizer active={playing} /> : <span>{String(number).padStart(2, "0")}</span>}
+                          <PlayPauseGlyph playing={current && active} size={16} />
+                        </span>
+                        <TrackCover size={42} track={item} />
+                        <span className="music-library-text">
+                          <strong>{item.title || "Sin título"}</strong>
+                          <small>{item.artist || (item.source.provider === "youtube" ? "YouTube" : "Spotify")} · {item.memoryTitle}</small>
+                        </span>
+                        <span className="music-provider-chip" data-provider={item.source.provider}>{item.source.provider === "youtube" ? "YT" : "Sp"}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            ) : <p className="music-library-note">Ninguna canción coincide con «{query}».</p>
+          ) : <p className="music-library-note">Aún no hay canciones compatibles. Añade un enlace de Spotify o YouTube a un recuerdo.</p>}
         </div>
       </div>
     </section>

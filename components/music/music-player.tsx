@@ -17,6 +17,7 @@ import { isPrivateMusicPath, type MusicTrack } from "@/features/music/library";
 import { MusicPlayerController } from "@/features/music/player-controller";
 import { Button } from "@/components/ui/button";
 import { MusicIcon } from "@/components/ui/icons";
+import { Equalizer } from "./track-visuals";
 
 type Library = Awaited<ReturnType<typeof getMusicLibraryAction>>;
 type MusicContextValue = {
@@ -104,19 +105,22 @@ export function MusicLibraryScope({ library }: { library: Library }) {
 
 export function MusicLibraryButton() {
   const { controller, state } = useMusicPlayer();
+  const playing = state.status === "playing";
   return (
     <Button
       aria-controls="music-controls-dialog"
       aria-expanded={state.expanded}
       aria-haspopup="dialog"
-      aria-label="Música"
-      className="p-3"
+      aria-label={playing && state.track ? `Música: sonando ${state.track.title || "una canción"}` : "Música"}
+      className="music-header-button relative p-3"
+      data-has-track={Boolean(state.track) || undefined}
       disabled={Boolean(state.owner)}
       onClick={controller.toggleLibrary}
       title="Música"
       variant="quiet"
     >
-      <MusicIcon size={20} />
+      {playing ? <Equalizer active className="text-[20px]" /> : <MusicIcon size={20} />}
+      <span aria-hidden="true" className="music-header-dot" />
     </Button>
   );
 }

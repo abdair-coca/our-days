@@ -179,7 +179,15 @@ su embed confirma: no se infiere un final ni se ofrece control de volumen o
 seek de canciones. YouTube se reproduce en un iframe persistente de 1 × 1 px;
 Ver vídeo amplía ese mismo iframe y Ocultar vídeo lo reduce sin pausar ni
 reiniciar la canción. Cerrar los controles conserva la reproducción; detener
-destruye el reproductor. Bloqueos del navegador y restricciones del proveedor ofrecen
+destruye el reproductor. La cápsula muestra un vinilo que gira solo mientras
+el proveedor confirma reproducción, un anillo de progreso y acceso a la
+siguiente canción. Los controles completos añaden saltos de ±10 s y volumen
+únicamente para YouTube (API documentada), atajos de teclado (Espacio/K,
+←/J, →/L) cuando el foco no está en un control que use esa tecla, búsqueda
+en la biblioteca y, en móvil, arrastrar la hoja hacia abajo para cerrarla.
+La preferencia de volumen vive en memoria y sobrevive al cambio de canción.
+Las portadas de YouTube se cargan desde su CDN de miniaturas sin referrer;
+Spotify y cualquier fallo usan arte generativo derivado del enlace. Bloqueos del navegador y restricciones del proveedor ofrecen
 Reanudar, Reintentar o abrir el enlace canónico.
 
 ## Flujo de imágenes

@@ -190,3 +190,83 @@ export function XIcon(props: IconProps) {
     </IconBase>
   );
 }
+
+export function SkipBackIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M18 18 9.5 12 18 6v12Z" fill="currentColor" stroke="none" />
+      <path d="M6 6v12" strokeWidth="2.2" />
+    </IconBase>
+  );
+}
+
+export function SkipForwardIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="m6 18 8.5-6L6 6v12Z" fill="currentColor" stroke="none" />
+      <path d="M18 6v12" strokeWidth="2.2" />
+    </IconBase>
+  );
+}
+
+/** Circular arrow with the step drawn inside; `direction` mirrors it. */
+export function SeekIcon({
+  direction = 1,
+  ...props
+}: IconProps & { direction?: -1 | 1 }) {
+  return (
+    <IconBase {...props}>
+      <g transform={direction === -1 ? "matrix(-1 0 0 1 24 0)" : undefined}>
+        <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" />
+        <path d="M18 3v4h-4" />
+      </g>
+      <text
+        fill="currentColor"
+        fontFamily="inherit"
+        fontSize="7.5"
+        fontWeight="700"
+        stroke="none"
+        textAnchor="middle"
+        x="12"
+        y="14.6"
+      >
+        10
+      </text>
+    </IconBase>
+  );
+}
+
+export function VolumeIcon({ level = 1, ...props }: IconProps & { level?: number }) {
+  return (
+    <IconBase {...props}>
+      <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4v-5Z" />
+      {level <= 0 ? (
+        <path d="m16 9.5 5 5M21 9.5l-5 5" />
+      ) : (
+        <>
+          <path d="M15.5 9.2a4 4 0 0 1 0 5.6" />
+          {level > 0.5 ? <path d="M18.4 6.6a7.6 7.6 0 0 1 0 10.8" /> : null}
+        </>
+      )}
+    </IconBase>
+  );
+}
+
+export function ListMusicIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M4 6h11M4 11h11M4 16h7" />
+      <path d="M18 18.5V8l3-1" />
+      <circle cx="16" cy="18.5" r="2" />
+    </IconBase>
+  );
+}
+
+export function VideoIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <rect height="12" rx="2.5" width="14" x="3" y="6" />
+      <path d="m17 10.5 4-2.5v8l-4-2.5" />
+    </IconBase>
+  );
+}
