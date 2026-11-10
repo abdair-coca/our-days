@@ -5,11 +5,12 @@ import { motion, useReducedMotion } from "motion/react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
-/* Signed Supabase URLs are private and dynamic, so native loading is intentional. */
-/* eslint-disable @next/next/no-img-element */
 
 import { fadeUp, staggerContainer } from "@/components/motion/variants";
 import { Button } from "@/components/ui/button";
+import { FadeImage, placeholderStyle } from "@/components/ui/fade-image";
+import { ExpandIcon } from "@/components/ui/icons";
+import { useLightbox } from "@/components/gallery/photo-lightbox";
 import { StatusPanel } from "@/components/ui/status-panel";
 import type { MemoryPhoto } from "@/types/memory";
 
@@ -27,6 +28,7 @@ export function MemoryGallery({
   state = "loaded",
 }: MemoryGalleryProps) {
   const router = useRouter();
+  const lightbox = useLightbox();
   const shouldReduceMotion = useReducedMotion();
   const [failedPhotoIds, setFailedPhotoIds] = useState<Set<string>>(
     () => new Set(),
@@ -127,21 +129,21 @@ export function MemoryGallery({
           }
           className={
             featured && index === 0
-              ? "aspect-[4/3] overflow-hidden rounded-[var(--radius-card)] bg-surface-soft bg-cover bg-center shadow-[var(--shadow-floating)] sm:col-span-2 sm:aspect-[16/9]"
-              : "aspect-[4/3] overflow-hidden rounded-[var(--radius-card)] bg-surface-soft bg-cover bg-center shadow-[var(--shadow-card)]"
+              ? "relative aspect-[4/3] overflow-hidden rounded-[var(--radius-card)] bg-surface-soft bg-cover bg-center shadow-[var(--shadow-floating)] sm:col-span-2 sm:aspect-[16/9]"
+              : "relative aspect-[4/3] overflow-hidden rounded-[var(--radius-card)] bg-surface-soft bg-cover bg-center shadow-[var(--shadow-card)]"
           }
           key={photo.id}
           role={photo.src && !failedPhotoIds.has(photo.id) ? undefined : "img"}
           style={{
             backgroundImage:
               photo.src && !failedPhotoIds.has(photo.id)
-                ? undefined
+                ? placeholderStyle(photo)?.backgroundImage
                 : photo.gradient,
           }}
           variants={fadeUp}
         >
           {photo.src && !failedPhotoIds.has(photo.id) ? (
-            <img
+            <FadeImage
               alt={photo.alt}
               className="size-full object-cover"
               decoding="async"
@@ -163,6 +165,19 @@ export function MemoryGallery({
                 </Button>
               </div>
             </div>
+          ) : null}
+          {lightbox && !failedPhotoIds.has(photo.id) ? (
+            <>
+              <button
+                aria-label={`Ver en pantalla completa: ${photo.alt}`}
+                className="photo-open"
+                onClick={() => lightbox.open(photo.id)}
+                type="button"
+              />
+              <span aria-hidden="true" className="photo-open-hint">
+                <ExpandIcon size={16} />
+              </span>
+            </>
           ) : null}
         </motion.div>
       ))}

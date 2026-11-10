@@ -1,0 +1,250 @@
+/* Full-screen photo viewer. Gestures drive inline transforms; CSS owns the
+   resting states, entrances and the controls' visibility. */
+
+.lightbox {
+  position: fixed;
+  z-index: 90;
+  inset: 0;
+  color: #fff;
+  overscroll-behavior: contain;
+  animation: lightbox-in var(--motion-normal) var(--ease-gentle) both;
+}
+.lightbox[data-closing] {
+  animation: lightbox-out 180ms var(--ease-exit) both;
+}
+.lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgb(77 56 48 / 0.55), transparent 70%),
+    #16110f;
+  transition: opacity var(--motion-normal) var(--ease-standard);
+}
+.lightbox-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: zoom-in;
+}
+.lightbox[data-zoomed] .lightbox-stage {
+  cursor: grab;
+}
+.lightbox-track {
+  display: flex;
+  height: 100%;
+  transition: transform 320ms var(--ease-gentle);
+  will-change: transform;
+}
+.lightbox-slide {
+  display: grid;
+  flex: 0 0 100%;
+  place-items: center;
+  height: 100%;
+  /* Neighbours' shadows must not paint over the current photo. */
+  overflow: hidden;
+  padding: calc(64px + env(safe-area-inset-top)) 12px calc(88px + env(safe-area-inset-bottom));
+}
+.lightbox-layer {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  transform-origin: center;
+  will-change: transform;
+}
+.lightbox-image {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 6px;
+  background-position: center;
+  background-size: cover;
+  box-shadow: 0 30px 90px rgb(0 0 0 / 0.45);
+  animation: lightbox-photo-in var(--motion-emotional) var(--ease-gentle) both;
+  -webkit-touch-callout: none;
+}
+.lightbox-art {
+  width: min(100%, 72vh * 4 / 3);
+  aspect-ratio: 4 / 3;
+  border-radius: 6px;
+  background-position: center;
+  background-size: cover;
+  box-shadow: 0 30px 90px rgb(0 0 0 / 0.45);
+  animation: lightbox-photo-in var(--motion-emotional) var(--ease-gentle) both;
+}
+.lightbox-error {
+  max-width: 22rem;
+  padding: 20px;
+  border: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: 14px;
+  font-size: 14px;
+  text-align: center;
+  color: rgb(255 255 255 / 0.8);
+}
+
+.lightbox-top,
+.lightbox-bottom,
+.lightbox-nav {
+  transition:
+    opacity var(--motion-normal) var(--ease-standard),
+    transform var(--motion-normal) var(--ease-gentle);
+}
+.lightbox[data-chrome="false"] .lightbox-top { opacity: 0; transform: translateY(-8px); pointer-events: none; }
+.lightbox[data-chrome="false"] .lightbox-bottom { opacity: 0; transform: translateY(8px); pointer-events: none; }
+.lightbox[data-chrome="false"] .lightbox-nav { opacity: 0; pointer-events: none; }
+
+.lightbox-top {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(10px + env(safe-area-inset-top)) 12px 10px 20px;
+  background: linear-gradient(rgb(0 0 0 / 0.38), transparent);
+}
+.lightbox-counter {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+  color: rgb(255 255 255 / 0.85);
+}
+.lightbox-button {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.1);
+  color: #fff;
+  backdrop-filter: blur(12px);
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-instant) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+}
+.lightbox-button:hover:not(:disabled) { background: rgb(255 255 255 / 0.2); }
+.lightbox-button:active:not(:disabled) { transform: scale(0.9); }
+.lightbox-button:disabled { opacity: 0.25; cursor: default; }
+.lightbox-button:focus-visible { outline: 3px solid #e6b9a8; outline-offset: 3px; }
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  margin-top: -23px;
+}
+.lightbox-prev { left: 16px; }
+.lightbox-next { right: 16px; }
+
+.lightbox-bottom {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 28px 20px calc(16px + env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, rgb(0 0 0 / 0.42));
+  text-align: center;
+  pointer-events: none;
+}
+.lightbox-caption {
+  max-width: 40rem;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgb(255 255 255 / 0.88);
+}
+.lightbox-dots {
+  display: flex;
+  gap: 6px;
+}
+.lightbox-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.35);
+  transition:
+    width var(--motion-normal) var(--ease-gentle),
+    background-color var(--motion-normal) var(--ease-standard);
+}
+.lightbox-dots span[data-active="true"] {
+  width: 18px;
+  background: #fff;
+}
+.lightbox-hint {
+  font-size: 11px;
+  color: rgb(255 255 255 / 0.55);
+}
+
+/* Gallery tiles advertise that they open. */
+.photo-open {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  cursor: zoom-in;
+}
+.photo-open:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+.photo-open-hint {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgb(255 253 249 / 0.85);
+  color: var(--text);
+  box-shadow: 0 6px 18px rgb(43 33 29 / 0.15);
+  opacity: 0;
+  transform: scale(0.85);
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-gentle);
+  pointer-events: none;
+}
+.photo-open:hover + .photo-open-hint,
+.photo-open:focus-visible + .photo-open-hint {
+  opacity: 1;
+  transform: none;
+}
+
+@media (pointer: coarse) {
+  .lightbox-nav { display: none; }
+}
+@media (min-width: 768px) {
+  .lightbox-slide { padding: 76px 88px 96px; }
+}
+
+@keyframes lightbox-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes lightbox-out { to { opacity: 0; } }
+@keyframes lightbox-photo-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lightbox,
+  .lightbox[data-closing],
+  .lightbox-image,
+  .lightbox-art {
+    animation: none;
+  }
+  .lightbox-track,
+  .lightbox-dots span,
+  .photo-open-hint {
+    transition: none;
+  }
+}

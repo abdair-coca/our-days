@@ -1,13 +1,12 @@
 import Link from "next/link";
 
-/* Signed Supabase URLs are private and dynamic, so native loading is intentional. */
-/* eslint-disable @next/next/no-img-element */
 
 import { MemoryCard } from "@/components/memory/memory-card";
 import { MemoryPresentationOverlay } from "@/components/memory/memory-presentation";
 import { AnimatedHeadline, CountUp } from "@/components/motion/animated-headline";
 import { Reveal } from "@/components/motion/reveal";
 import { ButtonLink } from "@/components/ui/button-link";
+import { FadeImage, placeholderStyle } from "@/components/ui/fade-image";
 import { EmptyState } from "@/components/ui/status-panel";
 import { getMemoryCatalog } from "@/features/memories";
 import { getMemoryPresentation } from "@/features/memories/presentation";
@@ -89,12 +88,12 @@ export default async function HomePage() {
                   role={featured.photos[0]?.src ? undefined : "img"}
                   style={{
                     backgroundImage: featured.photos[0]?.src
-                      ? undefined
+                      ? placeholderStyle(featured.photos[0])?.backgroundImage
                       : featured.photos[0]?.gradient,
                   }}
                 >
                   {featured.photos[0]?.src ? (
-                    <img
+                    <FadeImage
                       alt={featured.photos[0].alt}
                       className="size-full object-cover transition-transform duration-[var(--motion-emotional)] ease-[var(--ease-gentle)] group-hover:scale-[1.02] motion-reduce:transition-none"
                       decoding="async"

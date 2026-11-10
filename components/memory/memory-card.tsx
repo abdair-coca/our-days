@@ -4,13 +4,12 @@ import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 
-/* Signed Supabase URLs are private and dynamic, so native loading is intentional. */
-/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 
 import { cardHover, imageHover } from "@/components/motion/variants";
 import { useMusicPlayer } from "@/components/music/music-player";
 import { Equalizer } from "@/components/music/track-visuals";
+import { FadeImage, placeholderStyle } from "@/components/ui/fade-image";
 import { ArrowLeftIcon, ImagesIcon, MusicIcon } from "@/components/ui/icons";
 import { formatMemoryDate } from "@/lib/utils/format-memory-date";
 import type { Memory } from "@/types/memory";
@@ -72,16 +71,18 @@ export function MemoryCard({ memory, priority = false }: MemoryCardProps) {
                 ? undefined
                 : cover?.alt ?? "Recuerdo sin imagen"
           }
-          className="relative aspect-[4/3] w-full overflow-hidden bg-[#eadfd7]"
+          className="relative aspect-[4/3] w-full overflow-hidden bg-[#eadfd7] bg-cover bg-center"
           role={cover?.src && imageState !== "failed" ? undefined : "img"}
           style={{
             backgroundImage:
-              cover?.src && imageState !== "failed" ? undefined : cover?.gradient,
+              cover?.src && imageState !== "failed"
+                ? placeholderStyle(cover)?.backgroundImage
+                : cover?.gradient,
           }}
           variants={imageHover}
         >
           {cover?.src && imageState !== "failed" ? (
-            <img
+            <FadeImage
               alt={cover.alt}
               className="size-full object-cover"
               decoding="async"

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { MemoryGallery } from "@/components/gallery/memory-gallery";
+import { PhotoLightboxProvider } from "@/components/gallery/photo-lightbox";
 import { DeleteMemoryButton } from "@/components/memory/delete-memory-button";
 import { Reveal } from "@/components/motion/reveal";
 import { SongCollection } from "@/components/music/song-collection";
@@ -26,6 +27,7 @@ export default async function MemoryDetailPage({ params }: MemoryDetailPageProps
   const [cover, ...galleryPhotos] = memory.photos;
 
   return (
+    <PhotoLightboxProvider photos={memory.photos} title={memory.title}>
     <article className="container-editorial py-8 sm:py-12">
       <Link
         aria-label="Volver a recuerdos"
@@ -112,5 +114,6 @@ export default async function MemoryDetailPage({ params }: MemoryDetailPageProps
         </section>
       ) : null}
     </article>
+    </PhotoLightboxProvider>
   );
 }

@@ -270,3 +270,12 @@ export function VideoIcon(props: IconProps) {
     </IconBase>
   );
 }
+
+export function ExpandIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path d="M15 3h6v6M9 21H3v-6" />
+      <path d="m21 3-7 7M3 21l7-7" />
+    </IconBase>
+  );
+}

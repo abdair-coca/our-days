@@ -448,7 +448,14 @@ export function MemoryPresentationOverlay({
                   transition={{ duration: shouldReduceMotion ? 0.1 : 0.38 }}
                 >
                   <div className="mx-auto max-w-3xl overflow-hidden rounded-[var(--radius-modal)] border border-white/15 bg-black/20 shadow-[0_30px_100px_rgba(0,0,0,0.25)] backdrop-blur-sm">
-                    <div className="relative aspect-[4/3] max-h-[55vh] min-h-52 overflow-hidden bg-white/10 sm:aspect-[16/9]">
+                    <div
+                      className="relative aspect-[4/3] max-h-[55vh] min-h-52 overflow-hidden bg-white/10 bg-cover bg-center sm:aspect-[16/9]"
+                      style={
+                        currentPhoto?.src && currentPhoto.placeholder
+                          ? { backgroundImage: `url(${currentPhoto.placeholder})` }
+                          : undefined
+                      }
+                    >
                       {currentPhoto?.src ? (
                         <motion.img
                           alt={currentPhoto.alt}
