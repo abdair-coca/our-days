@@ -44,6 +44,10 @@ La aplicación tiene una base verificable de performance y resiliencia. Este doc
 - [ ] Biblioteca: editar título conserva reproducción; cambiar URL carga en pausa; eliminar la canción activa detiene. Salir de sesión o cambiar de usuario/espacio vacía música y sesiones temporales.
 - [ ] Proveedores: confirmar eventos reales, Reanudar ante bloqueo y controles nativos de Spotify ante restricciones; comprobar Tab/Escape y controles accesibles en formularios e Historias.
 - [ ] Reproductor: el vinilo solo gira con reproducción confirmada; ±10 s y volumen aparecen solo con YouTube (volumen oculto en pantallas táctiles); Espacio/K, ←/J y →/L funcionan con los controles abiertos sin robar teclas a campos o deslizadores; arrastrar la hoja móvil hacia abajo la cierra y un arrastre corto la devuelve a su sitio; pulsar la canción activa en la biblioteca o en su tarjeta pausa/reanuda sin reiniciarla.
+- [ ] Autocompletar: pegar enlaces reales de YouTube y Spotify rellena título/artista/portada; un título escrito a mano no cambia; editar sin cambiar el enlace conserva la portada.
+- [ ] Migración `artwork_url` aplicada en Supabase; antes de aplicarla, añadir una canción sigue funcionando.
+- [ ] Fotos: crear un recuerdo con varias fotos grandes (aviso si superan 3,8 MB), placeholder borroso en red lenta y visor con deslizar, pellizcar, doble toque y arrastrar para cerrar en iOS y Android.
+- [ ] Búsqueda: "cafe" encuentra "Café"; el filtro de año conserva la búsqueda; Escape y "/" funcionan.
 - [ ] `prefers-reduced-motion`: sin giro de vinilo, ecualizador, marquesina, brillo de botones ni shimmer de skeletons.
 - [ ] Lighthouse móvil y escritorio: revisar LCP, CLS, INP y peso inicial.
 

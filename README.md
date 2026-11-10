@@ -22,7 +22,7 @@ Open `http://localhost:3000` after starting the development server.
 ## Implemented routes
 
 - `/` — featured and recent memories
-- `/memories` — chronological gallery with year filters
+- `/memories` — chronological gallery with year filters and accent-insensitive search (`?q=`)
 - `/memories/[id]` — memory detail; unknown IDs use Next.js `notFound()`
 - `/memories/new` — create a persisted memory when authenticated
 - `/memories/[id]/edit` — edit a persisted memory and its ordered photos
@@ -116,7 +116,8 @@ Before testing login on Vercel:
 - Email confirmation and provider settings remain controlled by Supabase Auth.
 - Invite links expire after seven days and can optionally be restricted to one email.
 - The current workspace model starts with one space per account; invited members join that space.
-- Song links open provider home pages and do not embed playback
+- Songs play through the official Spotify/YouTube embeds in one global player; pasting a link autocompletes title, artist and cover via the providers' oEmbed endpoints
+- Apply every file in `supabase/migrations` (including `20261110000000_memory_song_artwork.sql`) before deploying
 - Without Supabase configuration, loading and error interfaces still resolve through deterministic local data
 
 ## Next steps

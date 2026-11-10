@@ -187,7 +187,36 @@ siguiente canción. Los controles completos añaden saltos de ±10 s y volumen
 en la biblioteca y, en móvil, arrastrar la hoja hacia abajo para cerrarla.
 La preferencia de volumen vive en memoria y sobrevive al cambio de canción.
 Las portadas de YouTube se cargan desde su CDN de miniaturas sin referrer;
-Spotify y cualquier fallo usan arte generativo derivado del enlace. Bloqueos del navegador y restricciones del proveedor ofrecen
+Spotify usa la portada guardada en `memory_songs.artwork_url` y cualquier fallo
+cae en arte generativo derivado del enlace.
+
+### Uso diario
+
+- **Autocompletar canciones.** Al pegar un enlace, `getSongMetadataAction`
+  consulta los endpoints oEmbed oficiales de YouTube y Spotify (sin OAuth) con
+  la URL canónica ya reconocida, nunca una URL arbitraria, y solo para sesiones
+  válidas o el demo local. YouTube aporta título y artista (limpiando
+  "Official Video", "Lyrics", etc.); Spotify aporta título y portada. Los campos
+  que la persona escribió nunca se sobrescriben. La portada solo se guarda si
+  viene de `i.ytimg.com`, `*.scdn.co` o `*.spotifycdn.com`.
+- **Migración `20261110000000_memory_song_artwork`.** Añade `artwork_url`
+  (nullable). Si el código llega antes que la migración, guardar una canción
+  reintenta sin portada en lugar de fallar. Cambiar el enlace sin portada nueva
+  la borra; editar sin cambiarlo la conserva.
+- **Placeholders de fotos.** Al optimizar cada foto en el navegador se genera
+  una vista previa JPEG de 20 px (~1 KB) que se guarda en
+  `memory_photos.visual_value` (solo para fotos con `storage_path`, validada
+  como data URL). La foto real aparece con un fundido sobre esa vista previa.
+- **Visor de fotos.** El detalle abre las fotos a pantalla completa: deslizar,
+  pellizcar o doble toque para zoom, arrastrar hacia abajo para cerrar,
+  flechas/Escape en escritorio, foco atrapado y fondo `inert`.
+- **Búsqueda.** `/memories?q=` filtra en el servidor sin distinguir mayúsculas
+  ni tildes por título, historia, canciones, autor y fecha escrita ("agosto");
+  se combina con el filtro de año.
+- **Tamaño de guardado.** Las fotos nuevas viajan en la Server Action;
+  `bodySizeLimit` es 4 MB (Vercel admite 4,5 MB) y el formulario avisa antes
+  de enviar más de 3,8 MB. La solución definitiva es subir directamente a
+  Storage desde el navegador (las políticas actuales ya lo permiten). Bloqueos del navegador y restricciones del proveedor ofrecen
 Reanudar, Reintentar o abrir el enlace canónico.
 
 ## Flujo de imágenes

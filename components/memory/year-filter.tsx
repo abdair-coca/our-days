@@ -6,20 +6,30 @@ import { motion, useReducedMotion } from "motion/react";
 import { classNames } from "@/lib/utils/class-names";
 
 type YearFilterProps = {
+  /** Active search, preserved when switching years. */
+  query?: string;
   selectedYear: number | null;
   years: readonly number[];
 };
 
+function filterHref(year: number | null, query: string) {
+  const params = new URLSearchParams();
+  if (year !== null) params.set("year", String(year));
+  if (query) params.set("q", query);
+  const search = params.toString();
+  return search ? `/memories?${search}` : "/memories";
+}
+
 /** Year chips share one sliding highlight, like the main navigation. */
-export function YearFilter({ selectedYear, years }: YearFilterProps) {
+export function YearFilter({ query = "", selectedYear, years }: YearFilterProps) {
   const reduce = useReducedMotion();
   const options = [
-    { href: "/memories", label: "Todos", value: null },
-    ...years.map((year) => ({ href: `/memories?year=${year}`, label: String(year), value: year })),
+    { href: filterHref(null, query), label: "Todos", value: null },
+    ...years.map((year) => ({ href: filterHref(year, query), label: String(year), value: year })),
   ];
 
   return (
-    <nav aria-label="Filtrar recuerdos por año" className="-mx-1 mb-7 overflow-x-auto px-1 pb-2">
+    <nav aria-label="Filtrar recuerdos por año" className="-mx-3 mb-6 overflow-x-auto px-3 pt-1 pb-3">
       <ul className="flex min-w-max gap-2">
         {options.map((option) => {
           const current = option.value === selectedYear;
@@ -38,7 +48,7 @@ export function YearFilter({ selectedYear, years }: YearFilterProps) {
               >
                 {current ? (
                   <motion.span
-                    className="absolute inset-0 rounded-[var(--radius-button)] bg-accent shadow-[0_8px_20px_rgb(158_75_61/0.25)]"
+                    className="absolute inset-0 rounded-[var(--radius-button)] bg-accent shadow-[0_4px_12px_rgb(158_75_61/0.22)]"
                     layoutId="year-filter-pill"
                     transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 430, damping: 34, mass: 0.72 }}
                   />
